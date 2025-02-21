@@ -12,10 +12,10 @@ Quaternary Filter is a 100x smaller `map[int]bool`
 ```go
 package main
 
-import github.com/neurlang/quaternary
+import "github.com/neurlang/quaternary"
 
 func main() {
-	var filter = Make(map[int]bool{
+	var filter = quaternary.Make(map[int]bool{
 		5: true,
 		55: false,
 	})
@@ -27,7 +27,7 @@ func main() {
 		panic("55 not false")
 	}
 
-	println("5:", filter.GetInt(5), "55:", filter.GetInt(55), "size:", len(filter), "bytes")
+	println("5:", filter.GetInt(5), "55:", filter.GetInt(55), "size:", len(filter), "B")
 }
 ```
 
