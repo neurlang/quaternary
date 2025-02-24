@@ -30,5 +30,14 @@ func hash64(x, s uint32, m uint64) uint64 {
 	if m < 1<<32 {
 		return uint64(hash(x, s, uint32(m)))
 	}
-	return (uint64(s)<< 32 | uint64(x)) % m
+	return (uint64(s)<<32 | uint64(x)) % m
+}
+
+// data hash
+func dataHash(in uint32, data []byte) (out uint32) {
+	out = in
+	for _, v := range data {
+		out = hash(out, uint32(v), 0xffffffff)
+	}
+	return
 }
