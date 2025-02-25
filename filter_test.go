@@ -367,3 +367,40 @@ func TestMapMemoryUsageBytes(t *testing.T) {
 		}
 	}
 }
+
+func FuzzMapIntBool(f *testing.F) {
+	// Seed with example key/value pairs
+	f.Add(42, true)
+	f.Add(-3, false)
+	m := make(map[int]bool)
+	f.Fuzz(func(t *testing.T, key int, value bool) {
+
+		f := Make(m)
+		for k, v := range m {
+			got := f.GetInt(k)
+			if got != v {
+				t.Fatalf("map[int]bool: expected %v for key %q, got %v", v, k, got)
+			}
+		}
+		m[key] = value // Fuzzer controls the key and value
+	})
+}
+
+func FuzzMapStringBool(f *testing.F) {
+	// Seed with example key/value pairs
+	f.Add("hello", true)
+	f.Add("", false) // Empty string key
+	m := make(map[string]bool)
+	f.Fuzz(func(t *testing.T, key string, value bool) {
+
+
+		f := MakeString(m)
+		for k, v := range m {
+			got := f.GetString(k)
+			if got != v {
+				t.Fatalf("map[string]bool: expected %v for key %q, got %v", v, k, got)
+			}
+		}
+		m[key] = value // Fuzzer controls the key and value
+	})
+}
