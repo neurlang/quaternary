@@ -1,3 +1,4 @@
+// Package quaternary implements a smaller but immutable map which can't be iterated
 package quaternary
 
 import "crypto/sha512"
@@ -14,6 +15,8 @@ func grow(n int) int {
 	return (3 * n + 1) / 2
 }
 
+// Filter is an immutable map without iterating capability.
+// It is used to store keys of various types and retrieve the corresponding booleans.
 type Filter []byte
 
 func (f Filter) store(data []byte, answer byte) (inserted int) {
@@ -86,34 +89,43 @@ func (f Filter) insert(num uint64, answer byte) (inserted int) {
 	}
 	return inserted + 1
 }
-
+// GetInt checks if an int value exists in the Filter.
 func (f Filter) GetInt(num int) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetUint checks if an uint value exists in the Filter.
 func (f Filter) GetUint(num uint) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetInt8 checks if an int8 value exists in the Filter.
 func (f Filter) GetInt8(num int8) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetUint8 checks if an uint8 value exists in the Filter.
 func (f Filter) GetUint8(num uint8) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetInt16 checks if an int16 value exists in the Filter.
 func (f Filter) GetInt16(num int16) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetUint16 checks if an uint16 value exists in the Filter.
 func (f Filter) GetUint16(num uint16) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetInt32 checks if an int32 value exists in the Filter.
 func (f Filter) GetInt32(num int32) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetUint32 checks if an uint32 value exists in the Filter.
 func (f Filter) GetUint32(num uint32) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetInt64 checks if an int64 value exists in the Filter.
 func (f Filter) GetInt64(num int64) bool {
 	return f.GetUint64(uint64(num))
 }
+// GetUint64 checks if an uint64 value exists in the Filter.
 func (f Filter) GetUint64(num uint64) bool {
 	if len(f) == 0 {
 		return num&1 == 1
@@ -142,7 +154,7 @@ func (f Filter) GetUint64(num uint64) bool {
 	// won't happen
 	return false
 }
-
+// GetBytes checks if a 64-byte array exists in the Filter.
 func (f Filter) GetBytes(data [64]byte) bool {
 	if len(f) == 0 {
 		return false
@@ -164,7 +176,7 @@ func (f Filter) GetBytes(data [64]byte) bool {
 	}
 	return false
 }
-
+// GetString checks if a string exists in the Filter created by MakeString.
 func (f Filter) GetString(str string) bool {
 	if len(str) <= 7 {
 		return f.GetUint64(stringToUint64(str))
@@ -172,17 +184,21 @@ func (f Filter) GetString(str string) bool {
 	return f.GetBytes(stringsToByte64(str))
 }
 
+// GetStrings checks the two provided strings exist in the Filter created by MakeStrings.
 func (f Filter) GetStrings(strs ...string) bool {
 	return f.GetBytes(stringsToByte64(strs...))
 }
-
+// Number is a type constraint that represents any numeric type.
 type Number interface {
 	int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64
 }
 
+// Make creates a new Filter from a map of numeric values.
+// The type T must satisfy the Number constraint.
 func Make[T Number](numbers map[T]bool) Filter {
 	return create(numbers, make(map[[64]byte]bool))[0]
 }
+// MakeBytes creates a new Filter from a map of 64-byte arrays.
 func MakeBytes(data map[[64]byte]bool) Filter {
 	return create(make(map[int]bool), data)[0]
 }
@@ -252,7 +268,7 @@ func stringsToByte64(s ...string) (ret [64]byte) {
 	}
 	return
 }
-
+// MakeString creates a new Filter from a map of strings.
 func MakeString(string_map map[string]bool) Filter {
 	var data = make(map[[64]byte]bool)
 	var nums = make(map[uint64]bool)
@@ -266,6 +282,7 @@ func MakeString(string_map map[string]bool) Filter {
 	return create(nums, data)[0]
 }
 
+// Make2Strings creates a new Filter from a map of 2-string arrays.
 func Make2Strings(string_map map[[2]string]bool) Filter {
 	var data = make(map[[64]byte]bool)
 	for k, v := range string_map {
