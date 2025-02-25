@@ -85,6 +85,14 @@ func BenchmarkReadAllMap(b *testing.B) {
 
 func TestSanity(t *testing.T) {
 
+	Make(map[int]bool{
+		0:  true,
+	})
+
+	Make(map[int]bool{
+		0:  false,
+	})
+
 	var filter = Make(map[int]bool{
 		5:  true,
 		55: false,

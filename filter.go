@@ -11,7 +11,7 @@ func cellSize(n int) int {
 }
 
 func grow(n int) int {
-	return (3 * n) / 2
+	return (3 * n + 1) / 2
 }
 
 type Filter []byte
