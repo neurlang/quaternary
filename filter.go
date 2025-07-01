@@ -259,14 +259,30 @@ func stringToUint64(s string) uint64 {
 	return result
 }
 
-func stringsToByte64(s ...string) (ret [64]byte) {
-	for _, str := range s {
-		var hash = sha512.Sum512([]byte(str))
+// stringsToByte64 builds a 64‑byte key.
+// If called with exactly one string of length ≤ 63, it does:
+//   ret[0..len-1] = str bytes
+//   ret[len]      = byte(len)
+//   all other ret[i] == 0
+// Otherwise it sums SHA‑512 hashes as before.
+func stringsToByte64(parts ...string) (ret [64]byte) {
+	if len(parts) == 1 {
+		str := parts[0]
+		if len(str) <= 63 {
+			// fast path for short keys
+			n := copy(ret[:], str)
+			ret[n] = byte(n)
+			return ret
+		}
+	}
+	// fallback: sum SHA‑512 over all parts
+	for _, str := range parts {
+		hash := sha512.Sum512([]byte(str))
 		for i := range hash {
 			ret[i] += hash[i]
 		}
 	}
-	return
+	return ret
 }
 // MakeString creates a new Filter from a map of strings.
 func MakeString(string_map map[string]bool) Filter {
