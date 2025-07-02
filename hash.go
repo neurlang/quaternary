@@ -35,9 +35,18 @@ func hash64(x, s uint32, m uint64) uint64 {
 
 // data hash
 func dataHash(in uint32, data []byte) (out uint32) {
+
 	out = in
-	for _, v := range data {
-		out = hash(out, uint32(v), 0xffffffff)
+	for i := 0; i < (len(data)/4)*4; i += 4 {
+		out = hash(out, uint32(data[i])|(uint32(data[(i+1)])<<8)|(uint32(data[(i+2)])<<16)|(uint32(data[(i+3)])<<24), 0xffffffff)
+	}
+	var last = uint32(0xdeadbeef)
+	for i := 0; i < len(data)%4; i++ {
+		last += uint32(uint32(data[(len(data)/4)*4+i]) << 8 * uint32(i))
+
+	}
+	if len(data)%4 != 0 {
+		out = hash(out, last, 0xffffffff)
 	}
 	return
 }

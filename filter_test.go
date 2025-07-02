@@ -86,11 +86,11 @@ func BenchmarkReadAllMap(b *testing.B) {
 func TestSanity(t *testing.T) {
 
 	Make(map[int]bool{
-		0:  true,
+		0: true,
 	})
 
 	Make(map[int]bool{
-		0:  false,
+		0: false,
 	})
 
 	var filter = Make(map[int]bool{
@@ -392,7 +392,6 @@ func FuzzMapStringBool(f *testing.F) {
 	f.Add("", false) // Empty string key
 	m := make(map[string]bool)
 	f.Fuzz(func(t *testing.T, key string, value bool) {
-
 
 		f := MakeString(m)
 		for k, v := range m {
