@@ -28,7 +28,7 @@ package main
 
 import (
     "fmt"
-    "github.com/neurlang/quaternary"
+    quaternary "github.com/neurlang/quaternary/v1"
 )
 
 func main() {
