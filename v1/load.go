@@ -12,15 +12,7 @@ func get(f []byte, data []byte, anslen uint64) (ret []byte) {
 		return nil
 	}
 	var datb [64]byte
-	if len(data) > 63 {
-		datb = sha512.Sum512(data)
-	} else {
-		copy(datb[:], data)
-		datb[63] = byte(len(data))
-		for i := range datb {
-			datb[(i+1)&63] ^= datb[i]
-		}
-	}
+	datb = sha512.Sum512(data)
 
 	baseSize := uint64(len(f))
 	bitLimit := f[len(f)-1]
@@ -52,8 +44,8 @@ func get(f []byte, data []byte, anslen uint64) (ret []byte) {
 
 	// Process rounds
 outer:
-	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-		for roundy := roundx + 1; roundy < ROUNDS; roundy++ {
+	for roundx := uint32(1); roundx < ROUNDS; roundx++ {
+		for roundy := uint32(0); roundy < roundx; roundy++ {
 			var allDone uint64
 			for i := range done {
 				for j := 0; j < 8; j++ {

@@ -14,15 +14,7 @@ func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 	}
 
 	var datb [64]byte
-	if len(data) > 63 {
-		datb = sha512.Sum512(data)
-	} else {
-		copy(datb[:], data)
-		datb[63] = byte(len(data))
-		for i := range datb {
-			datb[(i+1)&63] ^= datb[i]
-		}
-	}
+	datb = sha512.Sum512(data)
 
 	baseSize := uint64(len(fs))
 	cells := cellSize(baseSize - 1)
@@ -42,14 +34,14 @@ func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 
 	// Track active filters and their insertion counts
 	active := make([]bool, storedBits, storedBits)
+	mutated := make([]bool, storedBits, storedBits)
 
-	var totalInserted uint64
 	//println(storedBits, cells, baseSize)
 
 	// Process rounds
 outer:
-	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-		for roundy := roundx + 1; roundy < ROUNDS; roundy++ {
+	for roundx := uint32(1); roundx < ROUNDS; roundx++ {
+		for roundy := uint32(0); roundy < roundx; roundy++ {
 			anyActive := false
 			x := binary.BigEndian.Uint32(datb[4*roundx:])
 			y := binary.BigEndian.Uint32(datb[4*roundy:])
@@ -75,22 +67,21 @@ outer:
 						active[i] = true
 					} else {
 						fs[pos] |= (bit + 1) << shift
-						totalInserted++
-						active[i] = true
+						mutated[i] = true
 					}
 				case 1:
 					if bit == 0 {
 						active[i] = true
 					} else {
 						fs[pos] |= 3 << shift
-						totalInserted++
+						mutated[i] = true
 					}
 				case 2:
 					if bit == 1 {
 						active[i] = true
 					} else {
 						fs[pos] |= 3 << shift
-						totalInserted++
+						mutated[i] = true
 					}
 				}
 			}
@@ -100,7 +91,12 @@ outer:
 			}
 		}
 	}
-
+	var totalInserted uint64
+	for i := uint64(0); i < storedBits; i++ {
+		if mutated[i] {
+			totalInserted++
+		}
+	}
 	// Finalize insertion counts
 	return totalInserted
 }

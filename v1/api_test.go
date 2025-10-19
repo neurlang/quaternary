@@ -175,6 +175,99 @@ func TestInsertBooleans(t *testing.T) {
 		}
 	}
 }
+func TestInsertIntegersActive(t *testing.T) {
+	{
+		m := map[string]uint64{
+			"active":   1,
+			"inactive": 0,
+		}
+		b := Make(m, 1)
+		for k, v := range m {
+			valb := GetBool(b, k)
+			if (v != 0) != valb {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", valb, k, v)
+			}
+			val := uint64(GetNum(b, 1, k))
+			if v != val {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", val, k, v)
+			}
+
+		}
+	}
+	{
+		m := map[string]uint64{
+			"S0t6lRZL": 1,
+			"kSix4YCB": 0,
+		}
+		b := Make(m, 1)
+		for k, v := range m {
+			valb := GetBool(b, k)
+			if (v != 0) != valb {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", valb, k, v)
+			}
+			val := uint64(GetNum(b, 1, k))
+			if v != val {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", val, k, v)
+			}
+
+		}
+	}
+	{
+		m := map[string]uint64{
+			"NDD63C2T": 1,
+			"yAVmNkB3": 0,
+		}
+		b := Make(m, 1)
+		for k, v := range m {
+			valb := GetBool(b, k)
+			if (v != 0) != valb {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", valb, k, v)
+			}
+			val := uint64(GetNum(b, 1, k))
+			if v != val {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", val, k, v)
+			}
+
+		}
+	}
+	{
+		m := map[string]uint64{
+			"MdR8DAqA": 0,
+			"hgPXP3o6": 1,
+		}
+		b := Make(m, 1)
+		for k, v := range m {
+			valb := GetBool(b, k)
+			if (v != 0) != valb {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", valb, k, v)
+			}
+			val := uint64(GetNum(b, 1, k))
+			if v != val {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", val, k, v)
+			}
+
+		}
+	}
+	{
+		m := map[string]uint64{
+			"S0t6lRZL": 0,
+			"lyBFeCmp": 1,
+		}
+		b := Make(m, 1)
+		for k, v := range m {
+			valb := GetBool(b, k)
+			if (v != 0) != valb {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", valb, k, v)
+			}
+			val := uint64(GetNum(b, 1, k))
+			if v != val {
+				t.Fatalf("Insert Integers Active returned %v for %s want %v", val, k, v)
+			}
+
+		}
+	}
+}
+
 func TestInsertIntegers(t *testing.T) {
 	{
 		m := map[string]uint8{

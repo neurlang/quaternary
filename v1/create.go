@@ -45,7 +45,7 @@ func create(data map[string][]byte, bitLimit byte) (filter []byte) {
 	for {
 		var is_mutated = true
 		var load uint64
-		for is_mutated {
+		for is_mutated && load < maxLoad {
 			var new_inserted uint64
 		inner1:
 			for k, v := range data {
