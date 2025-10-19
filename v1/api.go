@@ -89,8 +89,14 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 	for k, v := range m {
 		switch val := any(v).(type) {
 		case []byte:
+			if len(val) == 0 {
+				continue
+			}
 			mapping[comparableToString(k)] = val
 		case string:
+			if len(val) == 0 {
+				continue
+			}
 			mapping[comparableToString(k)] = []byte(val)
 		case bool:
 			if val {
@@ -117,10 +123,13 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 		}
 	}
 
+	// handle the empty map case
+	if len(mapping) == 0 {
+		return []byte{bitLimit}
+	}
+
 	// real impl
 	return create(mapping, bitLimit)
-	// scaffold Implementation
-	return MakeScaffold(mapping, bitLimit)
 }
 
 // Get retrieves an item based on comparable key and value bit size
@@ -128,8 +137,6 @@ func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	k := comparableToString(key)
 	// real impl
 	return get(f, []byte(k), valBitSize)
-	// scaffold Implementation
-	return GetScaffold(f, valBitSize, k)
 }
 
 // GetBool retrieves a bool based on comparable key
@@ -137,8 +144,6 @@ func GetBool[K comparable](f []byte, key K) bool {
 	k := comparableToString(key)
 	// real impl
 	return get(f, []byte(k), 1)[0] == 1
-	// scaffold Implementation
-	return GetScaffold(f, 1, k)[0] == 1
 }
 
 // GetNum retrieves a number based on comparable key and value bit size
@@ -150,7 +155,5 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 	copy(buf[8-len(b):8], b)
 	return binary.BigEndian.Uint64(buf[:])
 
-	// scaffold Implementation
-	//b := GetScaffold(f, valBitSize, k)
 
 }
