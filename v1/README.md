@@ -76,6 +76,14 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
 
 ---
 
+## BitLimit
+
+- For fine grained control of bit size of strored values
+  - Such as: storing integers with only few least significant bits
+- Use 0 for byte-aligned automatic control
+
+---
+
 ## Supported key/value types
 
 * **Keys**: any `comparable` (int, string, fixed byte arrays, etc.)
@@ -86,7 +94,7 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
 
 ---
 
-## Memory efficiency
+## Memory efficiency: Ω(⅀values_bits_size)
 
 From benchmarks (`go test --bench=ReadAll`):
 
