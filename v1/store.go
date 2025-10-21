@@ -17,7 +17,7 @@ func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 	datb = sha512.Sum512(data)
 
 	baseSize := uint64(len(fs))
-	cells := cellSize(baseSize - 1)
+	cells := cellSize(baseSize - 2)
 	storedBits := uint64(bitLimit)
 	if storedBits == 0 {
 		storedBits = uint64(len(answer)) * 8
@@ -99,4 +99,39 @@ outer:
 	}
 	// Finalize insertion counts
 	return totalInserted
+}
+
+// bloom put
+func put(fs []byte, data []byte, funcs byte) (ret byte) {
+	if len(fs) == 0 {
+		return 0
+	}
+	if funcs == 0 {
+		return 0
+	}
+
+	var datb [64]byte
+	datb = sha512.Sum512(data)
+
+	baseSize := uint64(len(fs))
+	cells := bitSize(baseSize - 2)
+
+	for roundx := uint32(1); roundx < ROUNDS; roundx++ {
+		for roundy := uint32(0); roundy < roundx; roundy++ {
+			x := binary.BigEndian.Uint32(datb[4*roundx:])
+			y := binary.BigEndian.Uint32(datb[4*roundy:])
+			hh := hash64(x, y, uint64(cells))
+			mask := byte(1) << (byte(hh) & 7)
+			pos := hh >> 3
+			if fs[pos]&mask == 0 {
+				fs[pos] |= mask
+				ret++
+			}
+			funcs--
+			if funcs == 0 {
+				return
+			}
+		}
+	}
+	return
 }

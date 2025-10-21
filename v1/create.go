@@ -12,7 +12,11 @@ func grow(n uint64) uint64 {
 	return (3*n + 1) / 2
 }
 
-func create(data map[string][]byte, bitLimit byte) (filter []byte) {
+func bitSize(n uint64) uint64 {
+	return n * 8
+}
+
+func create(data map[string][]byte, bitLimit, bloomFuncs byte) (filter []byte) {
 	var size uint64
 	var maxb uint64
 	if bitLimit == 1 {
@@ -39,12 +43,38 @@ func create(data map[string][]byte, bitLimit byte) (filter []byte) {
 		}
 	}
 	bytes := byteSize(grow(size))
-	filter = make([]byte, bytes+1, bytes+1)
-	filter[bytes] = bitLimit
+	filter = make([]byte, bytes+2, bytes+2)
+	filter[bytes+1] = bitLimit
+	filter[bytes] = bloomFuncs
 	var maxLoad = size
 	for {
-		var is_mutated = true
+		// BLOOM STAGE
+		var is_mutated = bloomFuncs > 0
 		var load uint64
+		for is_mutated && load < maxLoad {
+			var bloom_inserted uint64
+			for k := range data {
+				ins := put(filter, []byte(k), bloomFuncs)
+				bloom_inserted += uint64(ins)
+				if load+bloom_inserted >= maxLoad {
+					break
+				}
+			}
+			is_mutated = is_mutated && bloom_inserted > 0
+			//println("inserted", bloom_inserted, "is_mutated", is_mutated, "load", load, "maxLoad", maxLoad)
+			load += bloom_inserted
+		}
+		if is_mutated {
+			bytes = byteSize(grow(cellSize(bytes)))
+			filter = make([]byte, bytes+2, bytes+2)
+			filter[bytes+1] = bitLimit
+			filter[bytes] = bloomFuncs
+			maxLoad = grow(uint64(maxLoad))
+			//println("bytes", bytes, "maxLoad", maxLoad)
+			continue
+		}
+		// QUATERNARY STAGE
+		is_mutated = true
 		for is_mutated && load < maxLoad {
 			var new_inserted uint64
 		inner1:
@@ -71,10 +101,12 @@ func create(data map[string][]byte, bitLimit byte) (filter []byte) {
 		}
 		if is_mutated {
 			bytes = byteSize(grow(cellSize(bytes)))
-			filter = make([]byte, bytes+1, bytes+1)
-			filter[bytes] = bitLimit
+			filter = make([]byte, bytes+2, bytes+2)
+			filter[bytes+1] = bitLimit
+			filter[bytes] = bloomFuncs
 			maxLoad = grow(uint64(maxLoad))
 			//println("bytes", bytes, "maxLoad", maxLoad)
+			continue
 		} else {
 			break
 		}

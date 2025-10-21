@@ -4,7 +4,7 @@ import "encoding/binary"
 import "crypto/sha512"
 
 // get checks if an array exists in the Filters.
-func get(f []byte, data []byte, anslen uint64) (ret []byte) {
+func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 	if len(f) <= 0 {
 		return nil
 	}
@@ -15,6 +15,29 @@ func get(f []byte, data []byte, anslen uint64) (ret []byte) {
 	datb = sha512.Sum512(data)
 
 	baseSize := uint64(len(f))
+
+	bloomCells := bitSize(baseSize - 2)
+
+	if funcs > 0 {
+	blooming:
+		for roundx := uint32(1); roundx < ROUNDS; roundx++ {
+			for roundy := uint32(0); roundy < roundx; roundy++ {
+				x := binary.BigEndian.Uint32(datb[4*roundx:])
+				y := binary.BigEndian.Uint32(datb[4*roundy:])
+				hh := hash64(x, y, uint64(bloomCells))
+				mask := byte(1) << (byte(hh) & 7)
+				pos := hh >> 3
+				if f[pos]&mask == 0 {
+					return nil
+				}
+				funcs--
+				if funcs == 0 {
+					break blooming
+				}
+			}
+		}
+	}
+
 	bitLimit := f[len(f)-1]
 	if bitLimit != 0 {
 		if uint64(bitLimit) < anslen {
@@ -22,7 +45,7 @@ func get(f []byte, data []byte, anslen uint64) (ret []byte) {
 		}
 	}
 
-	cells := cellSize(baseSize - 1)
+	cells := cellSize(baseSize - 2)
 	storedBits := uint64(bitLimit)
 	if storedBits == 0 {
 		storedBits = anslen

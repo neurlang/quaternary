@@ -83,8 +83,8 @@ func comparableToString[T comparable](v T) string {
 	return fmt.Sprintf("%#v", v)
 }
 
-// Make generates the filter based on map m
-func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit byte) []byte {
+// New generates the map based on map m with garbage rate dependent on bloomFuncs
+func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit, bloomFuncs byte) []byte {
 	var mapping = make(map[string][]byte)
 	for k, v := range m {
 		switch val := any(v).(type) {
@@ -125,25 +125,39 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 
 	// handle the empty map case
 	if len(mapping) == 0 {
-		return []byte{bitLimit}
+		return []byte{bloomFuncs, bitLimit}
 	}
 
 	// real impl
-	return create(mapping, bitLimit)
+	return create(mapping, bitLimit, bloomFuncs)
+}
+
+// Make generates the filter based on map m
+func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit byte) []byte {
+	return New(m, bitLimit, 0)
+}
+
+// Bools retrieves a bool and the probabilistic membership based on comparable key
+func GetBools[K comparable](f []byte, key K) (bool, bool) {
+	k := comparableToString(key)
+	// real impl
+	data := get(f, []byte(k), 1, f[len(f)-2])
+	return (len(data) > 0) && (data[0] == 1), data != nil
 }
 
 // Get retrieves an item based on comparable key and value bit size
 func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	k := comparableToString(key)
 	// real impl
-	return get(f, []byte(k), valBitSize)
+	return get(f, []byte(k), valBitSize, f[len(f)-2])
 }
 
 // GetBool retrieves a bool based on comparable key
 func GetBool[K comparable](f []byte, key K) bool {
 	k := comparableToString(key)
 	// real impl
-	return get(f, []byte(k), 1)[0] == 1
+	data := get(f, []byte(k), 1, f[len(f)-2])
+	return (len(data) > 0) && (data[0] == 1)
 }
 
 // GetNum retrieves a number based on comparable key and value bit size
@@ -151,9 +165,8 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 	var buf [8]byte
 	k := comparableToString(key)
 	// real impl
-	b := get(f, []byte(k), valBitSize)
+	b := get(f, []byte(k), valBitSize, f[len(f)-2])
 	copy(buf[8-len(b):8], b)
 	return binary.BigEndian.Uint64(buf[:])
-
 
 }
