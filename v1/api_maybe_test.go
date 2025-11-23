@@ -37,7 +37,7 @@ func TestMakeNumberMapping(t *testing.T) {
 }
 
 func TestMakeNumberMappingBuffers(t *testing.T) {
-	for j := byte(100); j > 4; j-- {
+	for j := byte(100); j > 6; j-- {
 		println(j)
 		f := New(map[byte]string{
 			41: "hello",

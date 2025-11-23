@@ -1,9 +1,9 @@
 package v1
 
 import "encoding/binary"
-import "crypto/sha512"
+import sha256 "github.com/minio/sha256-simd"
 
-const ROUNDS = 16
+const ROUNDS = 8
 
 func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 	if len(fs) == 0 {
@@ -13,8 +13,8 @@ func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 		return 0
 	}
 
-	var datb [64]byte
-	datb = sha512.Sum512(data)
+	var datb [32]byte
+	datb = sha256.Sum256(data)
 
 	baseSize := uint64(len(fs))
 	cells := cellSize(baseSize - 2)
@@ -45,8 +45,11 @@ func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 
 	// Process rounds
 outer:
-	for roundx := uint32(1); roundx < ROUNDS; roundx++ {
-		for roundy := uint32(0); roundy < roundx; roundy++ {
+	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
+		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+			if roundx == roundy {
+				continue
+			}
 			anyActive := false
 			x := binary.BigEndian.Uint32(datb[4*roundx:])
 			y := binary.BigEndian.Uint32(datb[4*roundy:])
@@ -124,14 +127,17 @@ func put(fs []byte, data []byte, funcs byte) (ret byte) {
 		return 0
 	}
 
-	var datb [64]byte
-	datb = sha512.Sum512(data)
+	var datb [32]byte
+	datb = sha256.Sum256(data)
 
 	baseSize := uint64(len(fs))
 	cells := bitSize(baseSize - 2)
 
-	for roundx := uint32(1); roundx < ROUNDS; roundx++ {
-		for roundy := uint32(0); roundy < roundx; roundy++ {
+	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
+		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+			if roundx == roundy {
+				continue
+			}
 			x := binary.BigEndian.Uint32(datb[4*roundx:])
 			y := binary.BigEndian.Uint32(datb[4*roundy:])
 			hh := hash64(x, y, uint64(cells))

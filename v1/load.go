@@ -1,7 +1,7 @@
 package v1
 
 import "encoding/binary"
-import "crypto/sha512"
+import sha256 "github.com/minio/sha256-simd"
 
 // get checks if an array exists in the Filters.
 func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
@@ -11,8 +11,8 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 	if anslen == 0 {
 		return nil
 	}
-	var datb [64]byte
-	datb = sha512.Sum512(data)
+	var datb [32]byte
+	datb = sha256.Sum256(data)
 
 	baseSize := uint64(len(f))
 
@@ -20,8 +20,11 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 
 	if funcs > 0 {
 	blooming:
-		for roundx := uint32(1); roundx < ROUNDS; roundx++ {
-			for roundy := uint32(0); roundy < roundx; roundy++ {
+		for roundx := uint32(0); roundx < ROUNDS; roundx++ {
+			for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+				if roundx == roundy {
+					continue
+				}
 				x := binary.BigEndian.Uint32(datb[4*roundx:])
 				y := binary.BigEndian.Uint32(datb[4*roundy:])
 				hh := hash64(x, y, uint64(bloomCells))
@@ -67,8 +70,11 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 
 	// Process rounds
 outer:
-	for roundx := uint32(1); roundx < ROUNDS; roundx++ {
-		for roundy := uint32(0); roundy < roundx; roundy++ {
+	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
+		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+			if roundx == roundy {
+				continue
+			}
 			var allDone uint64
 			for i := range done {
 				for j := 0; j < 8; j++ {
