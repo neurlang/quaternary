@@ -35,6 +35,11 @@ func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 	// Track active filters and their insertion counts
 	active := make([]bool, storedBits, storedBits)
 	mutated := make([]bool, storedBits, storedBits)
+	
+	// Initialize all bits as active (needing to be processed)
+	for i := range active {
+		active[i] = true
+	}
 
 	//println(storedBits, cells, baseSize)
 
@@ -47,10 +52,8 @@ outer:
 			y := binary.BigEndian.Uint32(datb[4*roundy:])
 			hh := hash64(x, y, uint64(cells)<<1)
 
-			//println("hh:", hh, string(data), x, y, "store", storedBits)
-
 			for i := uint64(0); i < storedBits; i++ {
-				if active[i] {
+				if !active[i] {
 					continue
 				}
 				anyActive = true
@@ -64,24 +67,27 @@ outer:
 				switch state {
 				case 0:
 					if bit == byte(h&1) {
-						active[i] = true
+						active[i] = false  // Bit matches parity, resolved
 					} else {
 						fs[pos] |= (bit + 1) << shift
 						mutated[i] = true
+						active[i] = false  // Bit written, resolved
 					}
 				case 1:
 					if bit == 0 {
-						active[i] = true
+						active[i] = false  // Bit matches state, resolved
 					} else {
 						fs[pos] |= 3 << shift
 						mutated[i] = true
+						// Bit still active (conflict), continue processing
 					}
 				case 2:
 					if bit == 1 {
-						active[i] = true
+						active[i] = false  // Bit matches state, resolved
 					} else {
 						fs[pos] |= 3 << shift
 						mutated[i] = true
+						// Bit still active (conflict), continue processing
 					}
 				}
 			}
@@ -92,12 +98,20 @@ outer:
 		}
 	}
 	var totalInserted uint64
+	var anyUnresolved bool
 	for i := uint64(0); i < storedBits; i++ {
+		if active[i] {
+			anyUnresolved = true
+		}
 		if mutated[i] {
 			totalInserted++
 		}
 	}
-	// Finalize insertion counts
+	if anyUnresolved {
+		// At least one bit is unresolved - add penalty
+		return totalInserted + 1
+	}
+	// All bits resolved successfully
 	return totalInserted
 }
 

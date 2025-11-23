@@ -85,15 +85,13 @@ outer:
 			y := binary.BigEndian.Uint32(datb[4*roundy:])
 			hh := hash64(x, y, uint64(cells)<<1)
 
-			//println("hh:", hh, string(data), x, y, "load", storedBits)
-			parity := byte(hh&1) == 1
-
 			for i := uint64(0); i < storedBits; i++ {
 				mask := byte(1 << (i & 7))
 				if done[i>>3]&mask != 0 {
 					continue
 				}
 				h := hh + (i << 1)
+				parity := byte(h&1) == 1
 
 				pos := h >> 3
 				shift := h & 6
@@ -120,5 +118,21 @@ outer:
 			}
 		}
 	}
+	
+	// Check if any bits were resolved
+	var anyResolved bool
+	for i := uint64(0); i < storedBits; i++ {
+		mask := byte(1 << (i & 7))
+		if done[i>>3]&mask != 0 {
+			anyResolved = true
+			break
+		}
+	}
+	
+	// If no bits were resolved, return nil (key not found)
+	if !anyResolved {
+		return nil
+	}
+	
 	return
 }
