@@ -61,6 +61,9 @@ Output:
 ## API
 
 ```go
+// New generates the filter based on map m
+func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit, bloomFuncs byte) []byte
+
 // Make generates the filter based on map m
 func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit byte) []byte
 
@@ -81,6 +84,13 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
 - For fine grained control of bit size of strored values
   - Such as: storing integers with only few least significant bits
 - Use 0 for byte-aligned automatic control
+
+---
+
+## BloomFuncs
+
+- Setting to higher values than 0 enables returning dummy value (e.g. 0 / false) if value wasn't inserted
+- Probabilistic only (may fail - silently return garbage value with small probability)
 
 ---
 
