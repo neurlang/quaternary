@@ -142,3 +142,136 @@ outer:
 	
 	return
 }
+
+// getInto is an optimized version of get that writes into pre-allocated buffers
+// Returns true if any bits were resolved (key found), false otherwise
+func getInto(f []byte, data []byte, ret []byte, done []byte, anslen uint64, funcs byte) bool {
+	if len(f) <= 0 {
+		return false
+	}
+	if anslen == 0 {
+		return false
+	}
+	var datb [32]byte
+	datb = sha256.Sum256(data)
+
+	baseSize := uint64(len(f))
+
+	bloomCells := bitSize(baseSize - 2)
+
+	if funcs > 0 {
+	blooming:
+		for roundx := uint32(0); roundx < ROUNDS; roundx++ {
+			for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+				if roundx == roundy {
+					continue
+				}
+				x := binary.BigEndian.Uint32(datb[4*roundx:])
+				y := binary.BigEndian.Uint32(datb[4*roundy:])
+				hh := hash64(x, y, uint64(bloomCells))
+				mask := byte(1) << (byte(hh) & 7)
+				pos := hh >> 3
+				if f[pos]&mask == 0 {
+					return false
+				}
+				funcs--
+				if funcs == 0 {
+					break blooming
+				}
+			}
+		}
+	}
+
+	bitLimit := f[len(f)-1]
+	if bitLimit != 0 {
+		if uint64(bitLimit) < anslen {
+			panic("stored bit limit smaller than required answer")
+		}
+	}
+
+	cells := cellSize(baseSize - 2)
+	storedBits := uint64(bitLimit)
+	if storedBits == 0 {
+		storedBits = anslen
+	}
+	if storedBits >= cells {
+		panic("bad")
+	}
+	cells -= storedBits - 1
+
+	if storedBits > anslen {
+		storedBits = anslen
+	}
+
+	// Clear buffers
+	for i := range ret {
+		ret[i] = 0
+	}
+	for i := range done {
+		done[i] = 0
+	}
+
+	// Process rounds
+outer:
+	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
+		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+			if roundx == roundy {
+				continue
+			}
+			var allDone uint64
+			for i := range done {
+				for j := 0; j < 8; j++ {
+					if (done[i]>>j)&1 == 1 {
+						allDone++
+					}
+				}
+			}
+			if storedBits == allDone {
+				break outer
+			}
+			x := binary.BigEndian.Uint32(datb[4*roundx:])
+			y := binary.BigEndian.Uint32(datb[4*roundy:])
+			hh := hash64(x, y, uint64(cells)<<1)
+
+			for i := uint64(0); i < storedBits; i++ {
+				mask := byte(1 << (i & 7))
+				if done[i>>3]&mask != 0 {
+					continue
+				}
+				h := hh + (i << 1)
+				parity := byte(h&1) == 1
+
+				pos := h >> 3
+				shift := h & 6
+				val := (f[pos] >> shift) & 3
+
+				switch val {
+				case 0:
+					if parity {
+						ret[len(ret)-int(i>>3)-1] |= mask
+					}
+					done[i>>3] |= mask
+
+				case 1:
+					done[i>>3] |= mask
+
+				case 2:
+					ret[len(ret)-int(i>>3)-1] |= mask
+					done[i>>3] |= mask
+				case 3:
+					// Continue processing
+				}
+			}
+		}
+	}
+
+	// Check if any bits were resolved
+	for i := uint64(0); i < storedBits; i++ {
+		mask := byte(1 << (i & 7))
+		if done[i>>3]&mask != 0 {
+			return true
+		}
+	}
+
+	return false
+}

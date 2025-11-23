@@ -160,6 +160,21 @@ func GetBool[K comparable](f []byte, key K) bool {
 	return (len(data) > 0) && (data[0] == 1)
 }
 
+// GetBoolInt retrieves a bool based on int key (optimized, no allocations)
+func GetBoolInt(f []byte, key int) bool {
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], uint64(key))
+	return getBoolBytes(f, b[:])
+}
+
+// getBoolBytes retrieves a bool based on byte key (internal, optimized)
+func getBoolBytes(f []byte, data []byte) bool {
+	var ret [1]byte
+	var done [1]byte
+	ok := getInto(f, data, ret[:], done[:], 1, f[len(f)-2])
+	return ok && (ret[0]&1 == 1)
+}
+
 // GetNum retrieves a number based on comparable key and value bit size
 func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 	var buf [8]byte
