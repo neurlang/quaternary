@@ -85,51 +85,79 @@ func comparableToString[T comparable](v T) string {
 
 // New generates the map based on map m with garbage rate dependent on bloomFuncs
 func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit, bloomFuncs byte) []byte {
-	var mapping = make(map[string][]byte)
+	// Check if map is empty
+	if len(m) == 0 {
+		return []byte{bloomFuncs, bitLimit}
+	}
+
+	// Adjust bitLimit for bool type
+	for _, v := range m {
+		if _, ok := any(v).(bool); ok {
+			bitLimit = 1
+			break
+		}
+	}
+
+	// Materialize key-value pairs once to avoid repeated conversions
+	pairs := make([]KVPair, 0, len(m))
 	for k, v := range m {
+		var kv KVPair
+		kv.Key = comparableToString(k)
+		
 		switch val := any(v).(type) {
 		case []byte:
 			if len(val) == 0 {
 				continue
 			}
-			mapping[comparableToString(k)] = val
+			kv.Value = val
 		case string:
 			if len(val) == 0 {
 				continue
 			}
-			mapping[comparableToString(k)] = []byte(val)
+			kv.Value = []byte(val)
 		case bool:
 			if val {
-				mapping[comparableToString(k)] = []byte{1}
+				kv.Value = []byte{1}
 			} else {
-				mapping[comparableToString(k)] = []byte{0}
+				kv.Value = []byte{0}
 			}
-			bitLimit = 1
 		case uint64:
 			var b [8]byte
 			binary.BigEndian.PutUint64(b[:], uint64(val))
-			mapping[comparableToString(k)] = b[8-((bitLimit+7)/8):]
+			kv.Value = b[8-((bitLimit+7)/8):]
 		case uint32:
 			var b [4]byte
 			binary.BigEndian.PutUint32(b[:], uint32(val))
-			mapping[comparableToString(k)] = b[4-((bitLimit+7)/8):]
+			kv.Value = b[4-((bitLimit+7)/8):]
 		case uint16:
 			var b [2]byte
 			binary.BigEndian.PutUint16(b[:], uint16(val))
-			mapping[comparableToString(k)] = b[2-((bitLimit+7)/8):]
+			kv.Value = b[2-((bitLimit+7)/8):]
 		case uint8:
 			var b = []byte{byte(val)}
-			mapping[comparableToString(k)] = b[:]
+			kv.Value = b[:]
+		default:
+			continue
 		}
+		pairs = append(pairs, kv)
 	}
 
-	// handle the empty map case
-	if len(mapping) == 0 {
+	// handle the empty pairs case (all values were empty)
+	if len(pairs) == 0 {
 		return []byte{bloomFuncs, bitLimit}
 	}
 
+	// Create iterator over the materialized pairs
+	iter := func(yield func(KVPair) bool) {
+		for i := range pairs {
+			if !yield(pairs[i]) {
+				return
+			}
+		}
+	}
+
 	// real impl
-	return create(mapping, bitLimit, bloomFuncs)
+	return create(iter, bitLimit, bloomFuncs)
 }
 
 // Make generates the filter based on map m
