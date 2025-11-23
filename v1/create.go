@@ -16,30 +16,31 @@ func bitSize(n uint64) uint64 {
 	return n * 8
 }
 
-// KVPair represents a key-value pair for iteration
-type KVPair struct {
-	Key   string
-	Value []byte
+func kvPairKey(kvPair *[2][]byte) *[]byte {
+	return &(kvPair[0])
+}
+func kvPairValue(kvPair *[2][]byte) *[]byte {
+	return &(kvPair[1])
 }
 
 // Iterator is a function that yields key-value pairs
 // It can be called multiple times to restart iteration
-type Iterator func(yield func(KVPair) bool)
+type Iterator func(yield func(kvPair [2][]byte) bool)
 
 func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 	var size uint64
 	var maxb uint64
 	if bitLimit == 1 {
-		iter(func(kv KVPair) bool {
-			if len(kv.Value) > 0 {
+		iter(func(kvPair [2][]byte) bool {
+			if len(*kvPairValue(&kvPair)) > 0 {
 				size++
 			}
 			return true
 		})
 		maxb = 1
 	} else if bitLimit > 1 {
-		iter(func(kv KVPair) bool {
-			length := uint64(len(kv.Value)) * 8
+		iter(func(kv [2][]byte) bool {
+			length := uint64(len(*kvPairValue(&kv))) * 8
 			size += length
 			if maxb < length {
 				maxb = length
@@ -47,10 +48,10 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 			return true
 		})
 	} else {
-		iter(func(kv KVPair) bool {
-			size += uint64(len(kv.Value)) * 8
-			if maxb < uint64(len(kv.Value))*8 {
-				maxb = uint64(len(kv.Value)) * 8
+		iter(func(kv [2][]byte) bool {
+			size += uint64(len(*kvPairValue(&kv))) * 8
+			if maxb < uint64(len(*kvPairValue(&kv)))*8 {
+				maxb = uint64(len(*kvPairValue(&kv))) * 8
 			}
 			return true
 		})
@@ -66,8 +67,8 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 		var load uint64
 		for is_mutated && load < maxLoad {
 			var bloom_inserted uint64
-			iter(func(kv KVPair) bool {
-				ins := put(filter, []byte(kv.Key), bloomFuncs)
+			iter(func(kv [2][]byte) bool {
+				ins := put(filter, *kvPairKey(&kv), bloomFuncs)
 				bloom_inserted += uint64(ins)
 				if load+bloom_inserted >= maxLoad {
 					return false
@@ -91,18 +92,18 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 		is_mutated = true
 		for is_mutated && load < maxLoad {
 			var new_inserted uint64
-			iter(func(kv KVPair) bool {
-				if bitLimit != 0 && (len(kv.Value)) != int(bitLimit+7)/8 {
+			iter(func(kv [2][]byte) bool {
+				if bitLimit != 0 && (len(*kvPairValue(&kv))) != int(bitLimit+7)/8 {
 					panic("inserting value exceeding bit limit when bit limit set")
 				}
 				stored := bitLimit
 				if maxb < 256 && byte(maxb) < stored {
 					stored = byte(maxb)
 				}
-				if 8*len(kv.Value) < 256 && byte(8*len(kv.Value)) < stored {
-					stored = byte(8 * len(kv.Value))
+				if 8*len(*kvPairValue(&kv)) < 256 && byte(8*len(*kvPairValue(&kv))) < stored {
+					stored = byte(8 * len(*kvPairValue(&kv)))
 				}
-				ins := store(filter, []byte(kv.Key), kv.Value, stored)
+				ins := store(filter, *kvPairKey(&kv), *kvPairValue(&kv), stored)
 				new_inserted += ins
 				if load+new_inserted >= maxLoad {
 					return false

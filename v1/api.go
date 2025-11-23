@@ -8,79 +8,79 @@ import "math"
 
 const Unlimited byte = 0
 
-func comparableToString[T comparable](v T) string {
+func comparableToBytes[T comparable](v T) []byte {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.Pointer && rv.IsNil() {
-		return ""
+		return nil
 	}
 	switch val := any(v).(type) {
 	case string:
-		return val
+		return []byte(val)
 	case bool:
 		if val == true {
-			return "\x01"
+			return []byte{1}
 		}
-		return "\x00"
+		return []byte{0}
 	case int:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case int8:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case int16:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case int32:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case int64:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case uint:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case uint8:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case uint16:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case uint32:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case uint64:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case uintptr:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(val))
-		return string(b[:])
+		return b[:]
 	case float32:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(math.Float32bits(val)))
-		return string(b[:])
+		return b[:]
 	case float64:
 		var b [8]byte
 		binary.BigEndian.PutUint64(b[:], uint64(math.Float64bits(val)))
-		return string(b[:])
+		return b[:]
 	}
 
 	bytes, err := json.Marshal(v)
 	if err == nil {
-		return string(bytes)
+		return bytes
 	}
 
-	return fmt.Sprintf("%#v", v)
+	return []byte(fmt.Sprintf("%#v", v))
 }
 
 // New generates the map based on map m with garbage rate dependent on bloomFuncs
@@ -99,43 +99,43 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 	}
 
 	// Materialize key-value pairs once to avoid repeated conversions
-	pairs := make([]KVPair, 0, len(m))
+	pairs := make([][2][]byte, 0, len(m))
 	for k, v := range m {
-		var kv KVPair
-		kv.Key = comparableToString(k)
-		
+		var kv [2][]byte
+		*kvPairKey(&kv) = comparableToBytes(k)
+
 		switch val := any(v).(type) {
 		case []byte:
 			if len(val) == 0 {
 				continue
 			}
-			kv.Value = val
+			*kvPairValue(&kv) = val
 		case string:
 			if len(val) == 0 {
 				continue
 			}
-			kv.Value = []byte(val)
+			*kvPairValue(&kv) = []byte(val)
 		case bool:
 			if val {
-				kv.Value = []byte{1}
+				*kvPairValue(&kv) = []byte{1}
 			} else {
-				kv.Value = []byte{0}
+				*kvPairValue(&kv) = []byte{0}
 			}
 		case uint64:
 			var b [8]byte
 			binary.BigEndian.PutUint64(b[:], uint64(val))
-			kv.Value = b[8-((bitLimit+7)/8):]
+			*kvPairValue(&kv) = b[8-((bitLimit+7)/8):]
 		case uint32:
 			var b [4]byte
 			binary.BigEndian.PutUint32(b[:], uint32(val))
-			kv.Value = b[4-((bitLimit+7)/8):]
+			*kvPairValue(&kv) = b[4-((bitLimit+7)/8):]
 		case uint16:
 			var b [2]byte
 			binary.BigEndian.PutUint16(b[:], uint16(val))
-			kv.Value = b[2-((bitLimit+7)/8):]
+			*kvPairValue(&kv) = b[2-((bitLimit+7)/8):]
 		case uint8:
 			var b = []byte{byte(val)}
-			kv.Value = b[:]
+			*kvPairValue(&kv) = b[:]
 		default:
 			continue
 		}
@@ -148,7 +148,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 	}
 
 	// Create iterator over the materialized pairs
-	iter := func(yield func(KVPair) bool) {
+	iter := func(yield func(kvPair [2][]byte) bool) {
 		for i := range pairs {
 			if !yield(pairs[i]) {
 				return
@@ -167,24 +167,24 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 
 // Bools retrieves a bool and the probabilistic membership based on comparable key
 func GetBools[K comparable](f []byte, key K) (bool, bool) {
-	k := comparableToString(key)
+	k := comparableToBytes(key)
 	// real impl
-	data := get(f, []byte(k), 1, f[len(f)-2])
+	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1), data != nil
 }
 
 // Get retrieves an item based on comparable key and value bit size
 func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
-	k := comparableToString(key)
+	k := comparableToBytes(key)
 	// real impl
-	return get(f, []byte(k), valBitSize, f[len(f)-2])
+	return get(f, k, valBitSize, f[len(f)-2])
 }
 
 // GetBool retrieves a bool based on comparable key
 func GetBool[K comparable](f []byte, key K) bool {
-	k := comparableToString(key)
+	k := comparableToBytes(key)
 	// real impl
-	data := get(f, []byte(k), 1, f[len(f)-2])
+	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1)
 }
 
@@ -206,9 +206,9 @@ func getBoolBytes(f []byte, data []byte) bool {
 // GetNum retrieves a number based on comparable key and value bit size
 func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 	var buf [8]byte
-	k := comparableToString(key)
+	k := comparableToBytes(key)
 	// real impl
-	b := get(f, []byte(k), valBitSize, f[len(f)-2])
+	b := get(f, k, valBitSize, f[len(f)-2])
 	copy(buf[8-len(b):8], b)
 	return binary.BigEndian.Uint64(buf[:])
 
