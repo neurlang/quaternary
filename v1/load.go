@@ -69,19 +69,12 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 	done := make([]byte, (storedBits+7)/8, (storedBits+7)/8)
 
 	// Process rounds
+	var allDone uint64
 outer:
 	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
 		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
 			if roundx == roundy {
 				continue
-			}
-			var allDone uint64
-			for i := range done {
-				for j := 0; j < 8; j++ {
-					if (done[i]>>j)&1 == 1 {
-						allDone++
-					}
-				}
 			}
 			//println(storedBits, allDone)
 			if storedBits == allDone {
@@ -110,21 +103,24 @@ outer:
 						ret[len(ret)-int(i>>3)-1] |= mask
 					}
 					done[i>>3] |= mask
+					allDone++
 
 				case 1:
 					// Leave bit unset (false)
 					done[i>>3] |= mask
+					allDone++
 
 				case 2:
 					ret[len(ret)-int(i>>3)-1] |= mask
 					done[i>>3] |= mask
+					allDone++
 				case 3:
 					// Continue processing
 				}
 			}
 		}
 	}
-	
+
 	// Check if any bits were resolved
 	var anyResolved bool
 	for i := uint64(0); i < storedBits; i++ {
@@ -134,12 +130,12 @@ outer:
 			break
 		}
 	}
-	
+
 	// If no bits were resolved, return nil (key not found)
 	if !anyResolved {
 		return nil
 	}
-	
+
 	return
 }
 
@@ -212,19 +208,12 @@ func getInto(f []byte, data []byte, ret []byte, done []byte, anslen uint64, func
 	}
 
 	// Process rounds
+	var allDone uint64
 outer:
 	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
 		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
 			if roundx == roundy {
 				continue
-			}
-			var allDone uint64
-			for i := range done {
-				for j := 0; j < 8; j++ {
-					if (done[i]>>j)&1 == 1 {
-						allDone++
-					}
-				}
 			}
 			if storedBits == allDone {
 				break outer
@@ -251,13 +240,16 @@ outer:
 						ret[len(ret)-int(i>>3)-1] |= mask
 					}
 					done[i>>3] |= mask
+					allDone++
 
 				case 1:
 					done[i>>3] |= mask
+					allDone++
 
 				case 2:
 					ret[len(ret)-int(i>>3)-1] |= mask
 					done[i>>3] |= mask
+					allDone++
 				case 3:
 					// Continue processing
 				}

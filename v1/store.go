@@ -35,7 +35,7 @@ func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
 	// Track active filters and their insertion counts
 	active := make([]bool, storedBits, storedBits)
 	mutated := make([]bool, storedBits, storedBits)
-	
+
 	// Initialize all bits as active (needing to be processed)
 	for i := range active {
 		active[i] = true
@@ -70,15 +70,15 @@ outer:
 				switch state {
 				case 0:
 					if bit == byte(h&1) {
-						active[i] = false  // Bit matches parity, resolved
+						active[i] = false // Bit matches parity, resolved
 					} else {
 						fs[pos] |= (bit + 1) << shift
 						mutated[i] = true
-						active[i] = false  // Bit written, resolved
+						active[i] = false // Bit written, resolved
 					}
 				case 1:
 					if bit == 0 {
-						active[i] = false  // Bit matches state, resolved
+						active[i] = false // Bit matches state, resolved
 					} else {
 						fs[pos] |= 3 << shift
 						mutated[i] = true
@@ -86,7 +86,7 @@ outer:
 					}
 				case 2:
 					if bit == 1 {
-						active[i] = false  // Bit matches state, resolved
+						active[i] = false // Bit matches state, resolved
 					} else {
 						fs[pos] |= 3 << shift
 						mutated[i] = true

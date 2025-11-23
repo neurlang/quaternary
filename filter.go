@@ -458,7 +458,6 @@ func (f Filters) GetBytesMulti(data [64]byte) (ret uint64) {
 	done := uint64(0)           // Bitmap tracking completed filters
 	allDone := uint64(1<<n - 1) // Precomputed completion mask
 
-
 	// Process 64 hops
 	for j := uint32(0); j < ROUNDS; j++ {
 		if done == allDone {
