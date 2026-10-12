@@ -8,6 +8,20 @@ import "math"
 
 const Unlimited byte = 0
 
+// normBytes adjusts b to exactly need bytes: truncate from left if too long,
+// zero-pad on the left if too short.
+func normBytes(b []byte, need int) []byte {
+	if len(b) > need {
+		return b[len(b)-need:]
+	}
+	if len(b) < need {
+		padded := make([]byte, need)
+		copy(padded[need-len(b):], b)
+		return padded
+	}
+	return b
+}
+
 func comparableToBytes[T comparable](v T) []byte {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.Pointer && rv.IsNil() {
@@ -109,12 +123,23 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			if len(val) == 0 {
 				continue
 			}
-			*kvPairValue(&kv) = val
+			if bitLimit != 0 {
+				need := int((bitLimit + 7) / 8)
+				*kvPairValue(&kv) = normBytes(val, need)
+			} else {
+				*kvPairValue(&kv) = val
+			}
 		case string:
 			if len(val) == 0 {
 				continue
 			}
-			*kvPairValue(&kv) = []byte(val)
+			b := []byte(val)
+			if bitLimit != 0 {
+				need := int((bitLimit + 7) / 8)
+				*kvPairValue(&kv) = normBytes(b, need)
+			} else {
+				*kvPairValue(&kv) = b
+			}
 		case bool:
 			if val {
 				*kvPairValue(&kv) = []byte{1}
@@ -128,14 +153,25 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		case uint32:
 			var b [4]byte
 			binary.BigEndian.PutUint32(b[:], uint32(val))
-			*kvPairValue(&kv) = b[4-((bitLimit+7)/8):]
+			need := int((bitLimit + 7) / 8)
+			start := 4 - need
+			if start < 0 {
+				start = 0
+			}
+			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint16:
 			var b [2]byte
 			binary.BigEndian.PutUint16(b[:], uint16(val))
-			*kvPairValue(&kv) = b[2-((bitLimit+7)/8):]
+			need := int((bitLimit + 7) / 8)
+			start := 2 - need
+			if start < 0 {
+				start = 0
+			}
+			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint8:
-			var b = []byte{byte(val)}
-			*kvPairValue(&kv) = b[:]
+			b := []byte{byte(val)}
+			need := int((bitLimit + 7) / 8)
+			*kvPairValue(&kv) = normBytes(b, need)
 		default:
 			continue
 		}

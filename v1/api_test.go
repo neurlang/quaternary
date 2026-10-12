@@ -98,13 +98,17 @@ func TestMakeAndGet_BasicCases(t *testing.T) {
 }
 
 func TestMakePanicsWhenValueExceedsLimit(t *testing.T) {
-	// bitLimit = 1, inserting 2 values must panic
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("expected panic when inserting value exceeding bitLimit")
-		}
-	}()
-	Make(map[string][]byte{"x": {0x01, 0x02}}, 1)
+	// bitLimit = 1, inserting a 2-byte value: normBytes truncates to last 1 byte,
+	// so Make should NOT panic — it normalises instead.
+	// {0x01, 0x02} truncated to 1 byte keeping last byte = {0x02}, lsb = 0 → false
+	j := Make(map[string][]byte{"x": {0x01, 0x02}}, 1)
+	if len(j) == 0 {
+		t.Fatalf("Make returned empty filter")
+	}
+	got := GetBool(j, "x")
+	if got != false {
+		t.Fatalf("expected false (lsb of 0x02 truncated to 1 bit = 0), got %v", got)
+	}
 }
 
 func TestGetPanicsWhenRequestingMoreThanStoredLimit(t *testing.T) {
@@ -145,18 +149,29 @@ func TestMakeUnlimitedAllowsAnyValue(t *testing.T) {
 }
 
 func TestMakePanicsOnMultipleEntriesIfOneExceeds(t *testing.T) {
-	// Mixed map: one entry fits, one entry exceeds -> entire Make must panic
+	// With normBytes, values are silently truncated/padded to fit bitLimit.
+	// bitLimit=1 → need 1 byte; each value is normalised before storing.
+	// "ok":{0x01} → 1 byte, lsb=1 → true
+	// "bad":{0x01,0xFF} → truncated to {0xFF}, lsb=1 → true
+	// "also":{0x00} → 1 byte, lsb=0 → false
 	m := map[string][]byte{
 		"ok":   {0x01},
-		"bad":  {0x01, 0xFF}, // will exceed 1-bit limit
+		"bad":  {0x01, 0xFF},
 		"also": {0x00},
 	}
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("expected panic when one item exceeds bitLimit")
-		}
-	}()
-	Make(m, 1)
+	j := Make(m, 1)
+	if len(j) == 0 {
+		t.Fatalf("Make returned empty filter")
+	}
+	if !GetBool(j, "ok") {
+		t.Fatalf("expected true for 'ok'")
+	}
+	if !GetBool(j, "bad") {
+		t.Fatalf("expected true for 'bad' (0xFF lsb=1)")
+	}
+	if GetBool(j, "also") {
+		t.Fatalf("expected false for 'also'")
+	}
 }
 
 func TestInsertBooleans(t *testing.T) {
@@ -424,6 +439,271 @@ func FuzzGetUnlimitedBehavior(t *testing.F) {
 		exp := maskLSBBytes(val, req)
 		if !bytes.Equal(got, exp) {
 			t.Fatalf("unlimited fuzz Get mismatch req=%d got=%x exp=%x", req, got, exp)
+		}
+	})
+}
+
+type brokenValue = uint64
+func TestInsertBigBytes(t *testing.T) {
+	for bc := 3; bc < 63; bc++{
+		m := map[[32]byte]brokenValue{
+			[32]byte{1}: 1,
+			[32]byte{2}: 2,
+			[32]byte{3}: 3,
+			[32]byte{4}: 4,
+			[32]byte{5}: 5,
+		}
+		b := Make(m, byte(bc))
+		for k, v := range m {
+			val := brokenValue(GetNum(b, uint64(bc), k))
+			if v != val {
+				t.Fatalf("InsertBigBytes returned %v want %v", val, v)
+			}
+		}
+	}
+}
+
+// TestInsertBigBytesUint32 verifies that uint32 values round-trip correctly
+// for bitLimit values 3..62 — including those above uint32's natural 32-bit
+// width, which previously caused a slice-bounds panic.
+// The sweep starts at 3 so that all test values (1..5) fit within the bit limit.
+func TestInsertBigBytesUint32(t *testing.T) {
+	for bc := 3; bc < 63; bc++ {
+		m := map[[32]byte]uint32{
+			[32]byte{1}: 1,
+			[32]byte{2}: 2,
+			[32]byte{3}: 3,
+			[32]byte{4}: 4,
+			[32]byte{5}: 5,
+		}
+		b := Make(m, byte(bc))
+		for k, v := range m {
+			val := uint32(GetNum(b, uint64(bc), k))
+			if v != val {
+				t.Fatalf("InsertBigBytesUint32 bc=%d returned %v want %v", bc, val, v)
+			}
+		}
+	}
+}
+
+// TestInsertBigBytesUint16 verifies that uint16 values round-trip correctly
+// for bitLimit values 3..62 — including those above uint16's natural 16-bit
+// width, which previously caused a slice-bounds panic.
+// The sweep starts at 3 so that all test values (1..5) fit within the bit limit.
+func TestInsertBigBytesUint16(t *testing.T) {
+	for bc := 3; bc < 63; bc++ {
+		m := map[[32]byte]uint16{
+			[32]byte{1}: 1,
+			[32]byte{2}: 2,
+			[32]byte{3}: 3,
+			[32]byte{4}: 4,
+			[32]byte{5}: 5,
+		}
+		b := Make(m, byte(bc))
+		for k, v := range m {
+			val := uint16(GetNum(b, uint64(bc), k))
+			if v != val {
+				t.Fatalf("InsertBigBytesUint16 bc=%d returned %v want %v", bc, val, v)
+			}
+		}
+	}
+}
+
+// TestInsertBigBytesUint8 verifies that uint8 values round-trip correctly
+// for bitLimit values 3..62 — including those above uint8's natural 8-bit
+// width, which previously caused a "inserting value exceeding bit limit" panic.
+// The sweep starts at 3 so that all test values (1..5) fit within the bit limit.
+func TestInsertBigBytesUint8(t *testing.T) {
+	for bc := 3; bc < 63; bc++ {
+		m := map[[32]byte]uint8{
+			[32]byte{1}: 1,
+			[32]byte{2}: 2,
+			[32]byte{3}: 3,
+			[32]byte{4}: 4,
+			[32]byte{5}: 5,
+		}
+		b := Make(m, byte(bc))
+		for k, v := range m {
+			val := uint8(GetNum(b, uint64(bc), k))
+			if v != val {
+				t.Fatalf("InsertBigBytesUint8 bc=%d returned %v want %v", bc, val, v)
+			}
+		}
+	}
+}
+
+func TestBytesValueNormalization(t *testing.T) {
+	// 1. Too-short []byte with bitLimit != 0 → zero-padded left, round-trips via Get
+	t.Run("too_short_padded", func(t *testing.T) {
+		// bitLimit=16 requires 2 bytes; value is only 1 byte → should be left-padded
+		m := map[string][]byte{"k": {0xAB}}
+		j := Make(m, 16)
+		got := Get(j, 16, "k")
+		expected := []byte{0x00, 0xAB}
+		if !bytes.Equal(got, expected) {
+			t.Fatalf("too-short padding: got %x, want %x", got, expected)
+		}
+	})
+
+	// 2. Too-long []byte with bitLimit != 0 → truncated from left, round-trips via Get
+	t.Run("too_long_truncated", func(t *testing.T) {
+		// bitLimit=8 requires 1 byte; value is 3 bytes → keep last byte
+		m := map[string][]byte{"k": {0x11, 0x22, 0x33}}
+		j := Make(m, 8)
+		got := Get(j, 8, "k")
+		expected := []byte{0x33}
+		if !bytes.Equal(got, expected) {
+			t.Fatalf("too-long truncation: got %x, want %x", got, expected)
+		}
+	})
+
+	// 3. Exact-length []byte with bitLimit != 0 → unchanged, round-trips
+	t.Run("exact_length", func(t *testing.T) {
+		// bitLimit=16 requires 2 bytes; value is exactly 2 bytes
+		m := map[string][]byte{"k": {0xDE, 0xAD}}
+		j := Make(m, 16)
+		got := Get(j, 16, "k")
+		expected := []byte{0xDE, 0xAD}
+		if !bytes.Equal(got, expected) {
+			t.Fatalf("exact length: got %x, want %x", got, expected)
+		}
+	})
+
+	// 4. bitLimit == 0 with exact-length values → stored as-is, round-trips
+	t.Run("unlimited_as_is", func(t *testing.T) {
+		val := []byte{0x01, 0x02, 0x03}
+		m := map[string][]byte{"k": val}
+		j := Make(m, 0)
+		got := Get(j, uint64(len(val))*8, "k")
+		if !bytes.Equal(got, val) {
+			t.Fatalf("unlimited as-is: got %x, want %x", got, val)
+		}
+	})
+
+	// 5. string value shorter than (bitLimit+7)/8 → zero-padded, Get returns correct bytes
+	t.Run("string_short_padded", func(t *testing.T) {
+		// bitLimit=16 requires 2 bytes; string "A" is 1 byte (0x41) → padded to {0x00, 0x41}
+		m := map[string]string{"k": "A"}
+		j := Make(m, 16)
+		got := Get(j, 16, "k")
+		expected := []byte{0x00, 0x41}
+		if !bytes.Equal(got, expected) {
+			t.Fatalf("string short padded: got %x, want %x", got, expected)
+		}
+	})
+}
+
+// FuzzPositionMapUint64 builds a map[[32]byte]uint64 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint64(f *testing.F) {
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 64
+		m := make(map[[32]byte]uint64)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint64(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != v {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, v)
+				}
+			}
+		}
+	})
+}
+
+// FuzzPositionMapUint32 builds a map[[32]byte]uint32 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint32(f *testing.F) {
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 32
+		m := make(map[[32]byte]uint32)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint32(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		mask := uint64((1 << bitLimit) - 1)
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != uint64(v)&mask {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
+				}
+			}
+		}
+	})
+}
+
+// FuzzPositionMapUint16 builds a map[[32]byte]uint16 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint16(f *testing.F) {
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 16
+		m := make(map[[32]byte]uint16)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint16(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		mask := uint64((1 << bitLimit) - 1)
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != uint64(v)&mask {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
+				}
+			}
+		}
+	})
+}
+
+// FuzzPositionMapUint8 builds a map[[32]byte]uint8 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint8(f *testing.F) {
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 8
+		m := make(map[[32]byte]uint8)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint8(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		mask := uint64((1 << bitLimit) - 1)
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != uint64(v)&mask {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
+				}
+			}
 		}
 	})
 }
