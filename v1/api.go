@@ -1,6 +1,7 @@
 package v1
 
 import "reflect"
+import "bytes"
 import "fmt"
 import "encoding/binary"
 import "encoding/json"
@@ -97,7 +98,8 @@ func comparableToBytes[T comparable](v T) []byte {
 	return []byte(fmt.Sprintf("%#v", v))
 }
 
-// New generates the map based on map m with garbage rate dependent on bloomFuncs
+// New generates the map based on map m with garbage rate dependent on bloomFuncs.
+// It panics if distinct keys encode to identical bytes with conflicting stored values.
 func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit, bloomFuncs byte) []byte {
 	// Check if map is empty
 	if len(m) == 0 {
@@ -114,6 +116,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 
 	// Materialize key-value pairs once to avoid repeated conversions
 	pairs := make([][2][]byte, 0, len(m))
+	encoded := make(map[string]int, len(m))
 	for k, v := range m {
 		var kv [2][]byte
 		*kvPairKey(&kv) = comparableToBytes(k)
@@ -175,6 +178,14 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		default:
 			continue
 		}
+		key := string(kv[0])
+		if previous, ok := encoded[key]; ok {
+			if !bytes.Equal(pairs[previous][1], kv[1]) {
+				panic("quaternary: conflicting values for identical key encoding")
+			}
+			continue
+		}
+		encoded[key] = len(pairs)
 		pairs = append(pairs, kv)
 	}
 
