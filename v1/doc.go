@@ -36,7 +36,10 @@
 // # Key Types
 //
 // Any comparable type can be used as a key. Keys are converted to strings internally
-// using a deterministic encoding that preserves uniqueness.
+// using a deterministic encoding. Distinct keys can share an encoding (for example,
+// structs that differ only in unexported fields). New and Make panic when such keys
+// have conflicting stored values; identical key/value encodings are deduplicated.
+// Existing key encodings and the serialized filter format are unchanged.
 //
 // # Value Types
 //
