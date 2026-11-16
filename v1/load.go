@@ -8,6 +8,11 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 	if len(f) <= 0 {
 		return nil
 	}
+	// A two-byte filter is only the header. It has no cells, so every key is
+	// absent. Return before the bloom stage, which would read that header.
+	if len(f) == 2 {
+		return nil
+	}
 	if anslen == 0 {
 		return nil
 	}
@@ -143,6 +148,11 @@ outer:
 // Returns true if any bits were resolved (key found), false otherwise
 func getInto(f []byte, data []byte, ret []byte, done []byte, anslen uint64, funcs byte) bool {
 	if len(f) <= 0 {
+		return false
+	}
+	// A two-byte filter is only the header. It has no cells, so every key is
+	// absent. Return before the bloom stage, which would read that header.
+	if len(f) == 2 {
 		return false
 	}
 	if anslen == 0 {
