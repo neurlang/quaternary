@@ -214,6 +214,9 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 
 // Bools retrieves a bool and the probabilistic membership based on comparable key
 func GetBools[K comparable](f []byte, key K) (bool, bool) {
+	if len(f) < 2 {
+		return false, false
+	}
 	k := comparableToBytes(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
@@ -222,6 +225,9 @@ func GetBools[K comparable](f []byte, key K) (bool, bool) {
 
 // Get retrieves an item based on comparable key and value bit size
 func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
+	if len(f) < 2 {
+		return nil
+	}
 	k := comparableToBytes(key)
 	// real impl
 	return get(f, k, valBitSize, f[len(f)-2])
@@ -229,6 +235,9 @@ func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 
 // GetBool retrieves a bool based on comparable key
 func GetBool[K comparable](f []byte, key K) bool {
+	if len(f) < 2 {
+		return false
+	}
 	k := comparableToBytes(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
@@ -244,6 +253,9 @@ func GetBoolInt(f []byte, key int) bool {
 
 // getBoolBytes retrieves a bool based on byte key (internal, optimized)
 func getBoolBytes(f []byte, data []byte) bool {
+	if len(f) < 2 {
+		return false
+	}
 	var ret [1]byte
 	var done [1]byte
 	ok := getInto(f, data, ret[:], done[:], 1, f[len(f)-2])
@@ -252,6 +264,9 @@ func getBoolBytes(f []byte, data []byte) bool {
 
 // GetNum retrieves a number based on comparable key and value bit size
 func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
+	if len(f) < 2 {
+		return 0
+	}
 	var buf [8]byte
 	k := comparableToBytes(key)
 	// real impl
