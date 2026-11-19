@@ -1,20 +1,16 @@
 package v1
 
 import "encoding/binary"
-import sha256 "github.com/minio/sha256-simd"
 
 const ROUNDS = 8
 
-func store(fs []byte, data []byte, answer []byte, bitLimit byte) uint64 {
+func store(fs []byte, datb [32]byte, answer []byte, bitLimit byte) uint64 {
 	if len(fs) == 0 {
 		return 0
 	}
 	if len(answer) == 0 {
 		return 0
 	}
-
-	var datb [32]byte
-	datb = sha256.Sum256(data)
 
 	baseSize := uint64(len(fs))
 	cells := cellSize(baseSize - 2)
@@ -119,16 +115,13 @@ outer:
 }
 
 // bloom put
-func put(fs []byte, data []byte, funcs byte) (ret byte) {
+func put(fs []byte, datb [32]byte, funcs byte) (ret byte) {
 	if len(fs) == 0 {
 		return 0
 	}
 	if funcs == 0 {
 		return 0
 	}
-
-	var datb [32]byte
-	datb = sha256.Sum256(data)
 
 	baseSize := uint64(len(fs))
 	cells := bitSize(baseSize - 2)

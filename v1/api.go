@@ -1,11 +1,11 @@
 package v1
 
 import "reflect"
-import "bytes"
 import "fmt"
 import "encoding/binary"
 import "encoding/json"
 import "math"
+import sha256 "github.com/minio/sha256-simd"
 
 const Unlimited byte = 0
 
@@ -24,6 +24,11 @@ func normBytes(b []byte, need int) []byte {
 }
 
 func comparableToBytes[T comparable](v T) []byte {
+	var ret = sha256.Sum256(comparableToBytesInside(v))
+	return ret[:]
+}
+
+func comparableToBytesInside[T comparable](v T) []byte {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.Pointer && rv.IsNil() {
 		return nil
@@ -116,7 +121,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 
 	// Materialize key-value pairs once to avoid repeated conversions
 	pairs := make([][2][]byte, 0, len(m))
-	encoded := make(map[string]int, len(m))
+	encoded := make(map[[32]byte]struct{}, len(m))
 	for k, v := range m {
 		var kv [2][]byte
 		*kvPairKey(&kv) = comparableToBytes(k)
@@ -178,14 +183,11 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		default:
 			continue
 		}
-		key := string(kv[0])
-		if previous, ok := encoded[key]; ok {
-			if !bytes.Equal(pairs[previous][1], kv[1]) {
-				panic("quaternary: conflicting values for identical key encoding")
-			}
-			continue
+		key := kvPairKeyGet(kv[0])
+		if _, ok := encoded[key]; ok {
+			panic("quaternary: conflicting values for identical key encoding")
 		}
-		encoded[key] = len(pairs)
+		encoded[key] = struct{}{}
 		pairs = append(pairs, kv)
 	}
 
@@ -217,7 +219,7 @@ func GetBools[K comparable](f []byte, key K) (bool, bool) {
 	if len(f) < 2 {
 		return false, false
 	}
-	k := comparableToBytes(key)
+	k := comparableToBytesInside(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1), data != nil
@@ -228,7 +230,7 @@ func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	if len(f) < 2 {
 		return nil
 	}
-	k := comparableToBytes(key)
+	k := comparableToBytesInside(key)
 	// real impl
 	return get(f, k, valBitSize, f[len(f)-2])
 }
@@ -238,7 +240,7 @@ func GetBool[K comparable](f []byte, key K) bool {
 	if len(f) < 2 {
 		return false
 	}
-	k := comparableToBytes(key)
+	k := comparableToBytesInside(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1)
@@ -268,7 +270,7 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 		return 0
 	}
 	var buf [8]byte
-	k := comparableToBytes(key)
+	k := comparableToBytesInside(key)
 	// real impl
 	b := get(f, k, valBitSize, f[len(f)-2])
 	copy(buf[8-len(b):8], b)

@@ -22,6 +22,10 @@ func kvPairKey(kvPair *[2][]byte) *[]byte {
 func kvPairValue(kvPair *[2][]byte) *[]byte {
 	return &(kvPair[1])
 }
+func kvPairKeyGet(data []byte) (ret [32]byte) {
+	copy(ret[:], data[0:32])
+	return
+}
 
 // Iterator is a function that yields key-value pairs
 // It can be called multiple times to restart iteration
@@ -68,7 +72,7 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 		for is_mutated && load < maxLoad {
 			var bloom_inserted uint64
 			iter(func(kv [2][]byte) bool {
-				ins := put(filter, *kvPairKey(&kv), bloomFuncs)
+				ins := put(filter, kvPairKeyGet(*kvPairKey(&kv)), bloomFuncs)
 				bloom_inserted += uint64(ins)
 				if load+bloom_inserted >= maxLoad {
 					return false
@@ -103,7 +107,7 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 				if 8*len(*kvPairValue(&kv)) < 256 && byte(8*len(*kvPairValue(&kv))) < stored {
 					stored = byte(8 * len(*kvPairValue(&kv)))
 				}
-				ins := store(filter, *kvPairKey(&kv), *kvPairValue(&kv), stored)
+				ins := store(filter, kvPairKeyGet(*kvPairKey(&kv)), *kvPairValue(&kv), stored)
 				new_inserted += ins
 				if load+new_inserted >= maxLoad {
 					return false

@@ -28,12 +28,19 @@ func TestMakeRejectsConflictingKeyEncodings(t *testing.T) {
 }
 
 func TestDuplicateKeyEncodingsWithEqualValues(t *testing.T) {
-	for _, value := range []bool{false, true} {
-		filter := Make(map[[2]string]bool{{"\xff", "a"}: value, {"\xfe", "a"}: value}, 0)
-		for _, key := range [][2]string{{"\xff", "a"}, {"\xfe", "a"}} {
-			if got := GetBool(filter, key); got != value {
-				t.Fatalf("key %T: got %v, want %v", key, got, value)
+	t.Run("invalid UTF-8 array", func(t *testing.T) {
+		defer func() {
+			if got := recover(); got == nil || !strings.Contains(fmt.Sprint(got), "conflicting values for identical key encoding") {
+				t.Fatalf("got panic %v, want conflicting key encoding diagnostic", got)
+			}
+		}()
+		for _, value := range []bool{false, true} {
+			filter := Make(map[[2]string]bool{{"\xff", "a"}: value, {"\xfe", "a"}: value}, 0)
+			for _, key := range [][2]string{{"\xff", "a"}, {"\xfe", "a"}} {
+				if got := GetBool(filter, key); got != value {
+					t.Fatalf("key %T: got %v, want %v", key, got, value)
+				}
 			}
 		}
-	}
+	})
 }

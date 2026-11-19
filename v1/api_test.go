@@ -444,14 +444,15 @@ func FuzzGetUnlimitedBehavior(t *testing.F) {
 }
 
 type brokenValue = uint64
+
 func TestInsertBigBytes(t *testing.T) {
-	for bc := 3; bc < 63; bc++{
+	for bc := 3; bc < 63; bc++ {
 		m := map[[32]byte]brokenValue{
-			[32]byte{1}: 1,
-			[32]byte{2}: 2,
-			[32]byte{3}: 3,
-			[32]byte{4}: 4,
-			[32]byte{5}: 5,
+			{1}: 1,
+			{2}: 2,
+			{3}: 3,
+			{4}: 4,
+			{5}: 5,
 		}
 		b := Make(m, byte(bc))
 		for k, v := range m {
@@ -470,11 +471,11 @@ func TestInsertBigBytes(t *testing.T) {
 func TestInsertBigBytesUint32(t *testing.T) {
 	for bc := 3; bc < 63; bc++ {
 		m := map[[32]byte]uint32{
-			[32]byte{1}: 1,
-			[32]byte{2}: 2,
-			[32]byte{3}: 3,
-			[32]byte{4}: 4,
-			[32]byte{5}: 5,
+			{1}: 1,
+			{2}: 2,
+			{3}: 3,
+			{4}: 4,
+			{5}: 5,
 		}
 		b := Make(m, byte(bc))
 		for k, v := range m {
@@ -493,11 +494,11 @@ func TestInsertBigBytesUint32(t *testing.T) {
 func TestInsertBigBytesUint16(t *testing.T) {
 	for bc := 3; bc < 63; bc++ {
 		m := map[[32]byte]uint16{
-			[32]byte{1}: 1,
-			[32]byte{2}: 2,
-			[32]byte{3}: 3,
-			[32]byte{4}: 4,
-			[32]byte{5}: 5,
+			{1}: 1,
+			{2}: 2,
+			{3}: 3,
+			{4}: 4,
+			{5}: 5,
 		}
 		b := Make(m, byte(bc))
 		for k, v := range m {
@@ -516,11 +517,11 @@ func TestInsertBigBytesUint16(t *testing.T) {
 func TestInsertBigBytesUint8(t *testing.T) {
 	for bc := 3; bc < 63; bc++ {
 		m := map[[32]byte]uint8{
-			[32]byte{1}: 1,
-			[32]byte{2}: 2,
-			[32]byte{3}: 3,
-			[32]byte{4}: 4,
-			[32]byte{5}: 5,
+			{1}: 1,
+			{2}: 2,
+			{3}: 3,
+			{4}: 4,
+			{5}: 5,
 		}
 		b := Make(m, byte(bc))
 		for k, v := range m {
