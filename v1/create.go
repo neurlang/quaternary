@@ -27,11 +27,11 @@ func kvPairKeyGet(data []byte) (ret [32]byte) {
 	return
 }
 
-// Iterator is a function that yields key-value pairs
+// iterator is a function that yields key-value pairs
 // It can be called multiple times to restart iteration
-type Iterator func(yield func(kvPair [2][]byte) bool)
+type iterator func(yield func(kvPair [2][]byte) bool)
 
-func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
+func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 	var size uint64
 	var maxb uint64
 	if bitLimit == 1 {
