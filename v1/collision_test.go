@@ -54,28 +54,36 @@ func TestMakeRejectsConflictingKeyEncodingsHashstructure(t *testing.T) {
 				key := v.([2]string)
 				return []byte(key[0] + key[1])
 			})
-			hashstructure.New(map[[2]string]bool{{"\xff", "a"}: true, {"\xfe", "a"}: false}, 0, 0)
+			withHashstructureIntegration(hashstructure, func() {
+				New(map[[2]string]bool{{"\xff", "a"}: true, {"\xfe", "a"}: false}, 0, 0)
+			})
 		},
 		"named string": func() {
 			hashstructure := Hashstructure(func(v interface{}) []byte {
 				key := v.(namedString)
 				return []byte(key)
 			})
-			hashstructure.New(map[namedString]bool{"\xff": true, "\xfe": false}, 0, 0)
+			withHashstructureIntegration(hashstructure, func() {
+				New(map[namedString]bool{"\xff": true, "\xfe": false}, 0, 0)
+			})
 		},
 		"unexported field": func() {
 			hashstructure := Hashstructure(func(v interface{}) []byte {
 				key := v.(record)
 				return []byte{byte(key.hidden + key.Exported)}
 			})
-			hashstructure.New(map[record]bool{{1, 7}: true, {2, 7}: false}, 0, 0)
+			withHashstructureIntegration(hashstructure, func() {
+				New(map[record]bool{{1, 7}: true, {2, 7}: false}, 0, 0)
+			})
 		},
 		"byte values": func() {
 			hashstructure := Hashstructure(func(v interface{}) []byte {
 				key := v.(namedString)
 				return []byte(key)
 			})
-			hashstructure.New(map[namedString][]byte{"\xff": {1}, "\xfe": {2}}, 0, 3)
+			withHashstructureIntegration(hashstructure, func() {
+				New(map[namedString][]byte{"\xff": {1}, "\xfe": {2}}, 0, 3)
+			})
 		},
 	}
 	for name, build := range cases {
@@ -102,12 +110,14 @@ func TestDuplicateKeyEncodingsWithEqualValuesHashstructure(t *testing.T) {
 				key := v.([2]string)
 				return []byte(key[0] + "\x00" + key[1])
 			})
-			filter := hashstructure.New(map[[2]string]bool{{"\xff", "a"}: value, {"\xfe", "a"}: value}, 0, 0)
-			for _, key := range [][2]string{{"\xff", "a"}, {"\xfe", "a"}} {
-				if got := hashstructure.GetBool(filter, key); got != value {
-					t.Fatalf("key %T: got %v, want %v", key, got, value)
+			withHashstructureIntegration(hashstructure, func() {
+				filter := New(map[[2]string]bool{{"\xff", "a"}: value, {"\xfe", "a"}: value}, 0, 0)
+				for _, key := range [][2]string{{"\xff", "a"}, {"\xfe", "a"}} {
+					if got := GetBool(filter, key); got != value {
+						t.Fatalf("key %T: got %v, want %v", key, got, value)
+					}
 				}
-			}
+			})
 		}
 	})
 }

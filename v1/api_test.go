@@ -716,6 +716,9 @@ func FuzzPositionMapUint8(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint64Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 64
@@ -729,12 +732,9 @@ func FuzzPositionMapUint64Hashstructure(f *testing.F) {
 			return
 		}
 		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
-			hashstructure := Hashstructure(func(interface{}) []byte {
-				return []byte{1, 2, 3}
-			})
-			filter := hashstructure.New(m, bitLimit, bloomFuncs)
+			filter := New(m, bitLimit, bloomFuncs)
 			for k, v := range m {
-				got := hashstructure.GetNum(filter, bitLimit, k)
+				got := GetNum(filter, bitLimit, k)
 				if got != v {
 					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, v)
 				}
@@ -747,6 +747,9 @@ func FuzzPositionMapUint64Hashstructure(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint32Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 32
@@ -761,12 +764,9 @@ func FuzzPositionMapUint32Hashstructure(f *testing.F) {
 		}
 		mask := uint64((1 << bitLimit) - 1)
 		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
-			hashstructure := Hashstructure(func(interface{}) []byte {
-				return []byte{1, 2, 3}
-			})
-			filter := hashstructure.New(m, bitLimit, bloomFuncs)
+			filter := New(m, bitLimit, bloomFuncs)
 			for k, v := range m {
-				got := hashstructure.GetNum(filter, bitLimit, k)
+				got := GetNum(filter, bitLimit, k)
 				if got != uint64(v)&mask {
 					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
 				}
@@ -779,6 +779,9 @@ func FuzzPositionMapUint32Hashstructure(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint16Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 16
@@ -793,12 +796,9 @@ func FuzzPositionMapUint16Hashstructure(f *testing.F) {
 		}
 		mask := uint64((1 << bitLimit) - 1)
 		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
-			hashstructure := Hashstructure(func(interface{}) []byte {
-				return []byte{1, 2, 3}
-			})
-			filter := hashstructure.New(m, bitLimit, bloomFuncs)
+			filter := New(m, bitLimit, bloomFuncs)
 			for k, v := range m {
-				got := hashstructure.GetNum(filter, bitLimit, k)
+				got := GetNum(filter, bitLimit, k)
 				if got != uint64(v)&mask {
 					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
 				}
@@ -811,6 +811,9 @@ func FuzzPositionMapUint16Hashstructure(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint8Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 8
@@ -825,12 +828,9 @@ func FuzzPositionMapUint8Hashstructure(f *testing.F) {
 		}
 		mask := uint64((1 << bitLimit) - 1)
 		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
-			hashstructure := Hashstructure(func(interface{}) []byte {
-				return []byte{1, 2, 3}
-			})
-			filter := hashstructure.New(m, bitLimit, bloomFuncs)
+			filter := New(m, bitLimit, bloomFuncs)
 			for k, v := range m {
-				got := hashstructure.GetNum(filter, bitLimit, k)
+				got := GetNum(filter, bitLimit, k)
 				if got != uint64(v)&mask {
 					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
 				}

@@ -1,6 +1,6 @@
 module github.com/neurlang/quaternary
 
-go 1.27
+go 1.18
 
 require github.com/minio/sha256-simd v1.0.1
 
