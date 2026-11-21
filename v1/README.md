@@ -53,7 +53,7 @@ func main() {
 Output:
 
 ```
-5: true 55: false size: 2 B
+5: true 55: false size: 3 B
 ```
 
 ---
