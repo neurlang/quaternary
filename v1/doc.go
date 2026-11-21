@@ -57,6 +57,9 @@
 //   - 1-255: Limit values to specified number of bits (at most 64 for uint64)
 //
 // Bit limits enable more compact storage but require values to fit within the limit.
+// The filter is sized by the number of stored bits (bitLimit times the number of
+// items, or the sum of the value lengths when bitLimit is 0), not by the value
+// width rounded up to whole bytes.
 //
 // # Bloom Filters
 //
