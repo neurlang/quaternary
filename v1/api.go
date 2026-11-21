@@ -11,6 +11,15 @@ const Unlimited byte = 0
 
 // normBytes adjusts b to exactly need bytes: truncate from left if too long,
 // zero-pad on the left if too short.
+// bytesForBits returns the number of bytes needed to hold bitLimit bits.
+//
+// The arithmetic must be done in int: bitLimit is a byte, so evaluating
+// bitLimit+7 in byte arithmetic wraps around for bitLimit >= 249 and yields a
+// width of 0 bytes.
+func bytesForBits(bitLimit byte) int {
+	return (int(bitLimit) + 7) / 8
+}
+
 func normBytes(b []byte, need int) []byte {
 	if len(b) > need {
 		return b[len(b)-need:]
@@ -132,7 +141,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 				continue
 			}
 			if bitLimit != 0 {
-				need := int((bitLimit + 7) / 8)
+				need := bytesForBits(bitLimit)
 				*kvPairValue(&kv) = normBytes(val, need)
 			} else {
 				*kvPairValue(&kv) = val
@@ -143,7 +152,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			}
 			b := []byte(val)
 			if bitLimit != 0 {
-				need := int((bitLimit + 7) / 8)
+				need := bytesForBits(bitLimit)
 				*kvPairValue(&kv) = normBytes(b, need)
 			} else {
 				*kvPairValue(&kv) = b
@@ -157,11 +166,11 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		case uint64:
 			var b [8]byte
 			binary.BigEndian.PutUint64(b[:], uint64(val))
-			*kvPairValue(&kv) = b[8-((bitLimit+7)/8):]
+			*kvPairValue(&kv) = b[8-bytesForBits(bitLimit):]
 		case uint32:
 			var b [4]byte
 			binary.BigEndian.PutUint32(b[:], uint32(val))
-			need := int((bitLimit + 7) / 8)
+			need := bytesForBits(bitLimit)
 			start := 4 - need
 			if start < 0 {
 				start = 0
@@ -170,7 +179,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		case uint16:
 			var b [2]byte
 			binary.BigEndian.PutUint16(b[:], uint16(val))
-			need := int((bitLimit + 7) / 8)
+			need := bytesForBits(bitLimit)
 			start := 2 - need
 			if start < 0 {
 				start = 0
@@ -178,7 +187,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint8:
 			b := []byte{byte(val)}
-			need := int((bitLimit + 7) / 8)
+			need := bytesForBits(bitLimit)
 			*kvPairValue(&kv) = normBytes(b, need)
 		default:
 			continue

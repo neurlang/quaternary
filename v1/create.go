@@ -97,7 +97,7 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 		for is_mutated && load < maxLoad {
 			var new_inserted uint64
 			iter(func(kv [2][]byte) bool {
-				if bitLimit != 0 && (len(*kvPairValue(&kv))) != int(bitLimit+7)/8 {
+				if bitLimit != 0 && (len(*kvPairValue(&kv))) != bytesForBits(bitLimit) {
 					panic("inserting value exceeding bit limit when bit limit set")
 				}
 				stored := bitLimit
