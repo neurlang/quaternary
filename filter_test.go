@@ -379,7 +379,7 @@ func FuzzMapIntBool(f *testing.F) {
 		for k, v := range m {
 			got := f.GetInt(k)
 			if got != v {
-				t.Fatalf("map[int]bool: expected %v for key %q, got %v", v, k, got)
+				t.Fatalf("map[int]bool: expected %v for key %d, got %v", v, k, got)
 			}
 		}
 		m[key] = value // Fuzzer controls the key and value
@@ -397,7 +397,7 @@ func FuzzMapStringBool(f *testing.F) {
 		for k, v := range m {
 			got := f.GetString(k)
 			if got != v {
-				t.Fatalf("map[string]bool: expected %v for key %q, got %v", v, k, got)
+				t.Fatalf("map[string]bool: expected %v for key %s, got %v", v, k, got)
 			}
 		}
 		m[key] = value // Fuzzer controls the key and value
