@@ -247,7 +247,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		}
 		key := kvPairKeyGet(kv[0])
 		if _, ok := encoded[key]; ok {
-			panic("quaternary: conflicting values for identical key encoding: use Hashstructure.New() constructor with the hashstructure lib integration to fix")
+			panic("quaternary: conflicting values for identical key encoding: use Hashstructure Integration in quaternary package level to fix")
 		}
 		encoded[key] = struct{}{}
 		pairs = append(pairs, kv)
