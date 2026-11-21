@@ -142,3 +142,40 @@ func TestEmptyMapKeepsHeader(t *testing.T) {
 		t.Fatalf("empty uint32 map, bitLimit=12 bloom=3: got %v, want [3 12]", f)
 	}
 }
+
+// emptyValueIter yields n pairs whose values are all empty, so nothing can be
+// stored.
+func emptyValueIter(n int) Iterator {
+	return func(yield func(kvPair [2][]byte) bool) {
+		for i := 0; i < n; i++ {
+			k := compatKey(i)
+			if !yield([2][]byte{k[:], nil}) {
+				return
+			}
+		}
+	}
+}
+
+// TestCreateWithNothingToStoreReturnsEmptyFilter checks that create returns the
+// header-only filter when the total size is 0 instead of retrying forever
+// (growing a zero-sized filter leaves it zero-sized).
+func TestCreateWithNothingToStoreReturnsEmptyFilter(t *testing.T) {
+	for _, bitLimit := range []byte{0, 1, 2, 8, 64, 255} {
+		for _, bloom := range []byte{0, 3} {
+			for _, n := range []int{0, 1, 5} {
+				desc := fmt.Sprintf("create(bitLimit=%d, bloom=%d, %d empty values)", bitLimit, bloom, n)
+				var f []byte
+				if p := callWithTimeout(t, 5*time.Second, desc, func() { f = create(emptyValueIter(n), bitLimit, bloom) }); p != nil {
+					t.Fatalf("%s panicked: %v", desc, p)
+				}
+				if len(f) != 2 || f[0] != bloom || f[1] != bitLimit {
+					t.Fatalf("%s: got %v, want the header-only filter [%d %d]", desc, f, bloom, bitLimit)
+				}
+				// and the empty filter answers every lookup as a miss
+				if got := Get(f, 8, [32]byte{9}); got != nil {
+					t.Fatalf("%s: lookup in the empty filter returned %x", desc, got)
+				}
+			}
+		}
+	}
+}

@@ -60,6 +60,12 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 			return true
 		})
 	}
+	// Nothing to store. Growing a zero-sized filter keeps it zero-sized, so the
+	// retry loop below would never terminate: return the header-only filter, the
+	// same one New returns for an empty map.
+	if size == 0 {
+		return []byte{bloomFuncs, bitLimit}
+	}
 	bytes := byteSize(grow(size))
 	filter = make([]byte, bytes+2, bytes+2)
 	filter[bytes+1] = bitLimit
