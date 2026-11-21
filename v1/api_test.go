@@ -711,3 +711,130 @@ func FuzzPositionMapUint8(f *testing.F) {
 		}
 	})
 }
+
+// FuzzPositionMapUint64Hashstructure builds a map[[32]byte]uint64 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint64Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 64
+		m := make(map[[32]byte]uint64)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint64(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != v {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, v)
+				}
+			}
+		}
+	})
+}
+
+// FuzzPositionMapUint32Hashstructure builds a map[[32]byte]uint32 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint32Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 32
+		m := make(map[[32]byte]uint32)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint32(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		mask := uint64((1 << bitLimit) - 1)
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != uint64(v)&mask {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
+				}
+			}
+		}
+	})
+}
+
+// FuzzPositionMapUint16Hashstructure builds a map[[32]byte]uint16 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint16Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 16
+		m := make(map[[32]byte]uint16)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint16(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		mask := uint64((1 << bitLimit) - 1)
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != uint64(v)&mask {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
+				}
+			}
+		}
+	})
+}
+
+// FuzzPositionMapUint8Hashstructure builds a map[[32]byte]uint8 where each value is the
+// chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
+// and verifies every key round-trips correctly.
+func FuzzPositionMapUint8Hashstructure(f *testing.F) {
+	Integration = Hashstructure(func(interface{}) []byte {
+		return []byte{1, 2, 3}
+	})
+	f.Add(make([]byte, 64))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		const bitLimit = 8
+		m := make(map[[32]byte]uint8)
+		for i := 0; (i+1)*32 <= len(data); i++ {
+			var key [32]byte
+			copy(key[:], data[i*32:(i+1)*32])
+			m[key] = uint8(i)
+		}
+		if len(m) == 0 {
+			return
+		}
+		mask := uint64((1 << bitLimit) - 1)
+		for bloomFuncs := byte(0); bloomFuncs <= 8; bloomFuncs++ {
+			filter := New(m, bitLimit, bloomFuncs)
+			for k, v := range m {
+				got := GetNum(filter, bitLimit, k)
+				if got != uint64(v)&mask {
+					t.Fatalf("bloomFuncs=%d key=%x: got %d want %d", bloomFuncs, k, got, uint64(v)&mask)
+				}
+			}
+		}
+	})
+}

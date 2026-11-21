@@ -145,7 +145,7 @@ func TestEmptyMapKeepsHeader(t *testing.T) {
 
 // emptyValueIter yields n pairs whose values are all empty, so nothing can be
 // stored.
-func emptyValueIter(n int) Iterator {
+func emptyValueIter(n int) iterator {
 	return func(yield func(kvPair [2][]byte) bool) {
 		for i := 0; i < n; i++ {
 			k := compatKey(i)

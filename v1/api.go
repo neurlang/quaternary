@@ -50,9 +50,29 @@ func normBytes(b []byte, need int) []byte {
 	return b
 }
 
-func comparableToBytes[T comparable](v T) []byte {
-	var ret = sha256.Sum256(comparableToBytesInside(v))
+// Hashstructure is the integration callback type for custom map key hashing library e.g.:
+// https://github.com/mitchellh/hashstructure
+type Hashstructure func(interface{}) []byte
+
+// Integration is the integration to the custom map key hashing library e.g.:
+// https://github.com/mitchellh/hashstructure
+var Integration Hashstructure
+
+func comparableToBytes[T comparable](v T, hashit Hashstructure) []byte {
+	var data = comparableToBytesInside(v)
+	if Integration != nil {
+		data = append(data, Integration(v)...)
+	}
+	var ret = sha256.Sum256(data)
 	return ret[:]
+}
+
+func comparableToBytesInsideHashstructure[T comparable](v T, hashit Hashstructure) []byte {
+	var data = comparableToBytesInside(v)
+	if Integration != nil {
+		data = append(data, Integration(v)...)
+	}
+	return data
 }
 
 func comparableToBytesInside[T comparable](v T) []byte {
@@ -166,7 +186,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 	encoded := make(map[[32]byte]struct{}, len(m))
 	for k, v := range m {
 		var kv [2][]byte
-		*kvPairKey(&kv) = comparableToBytes(k)
+		*kvPairKey(&kv) = comparableToBytes(k, Integration)
 
 		switch val := any(v).(type) {
 		case []byte:
@@ -227,7 +247,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		}
 		key := kvPairKeyGet(kv[0])
 		if _, ok := encoded[key]; ok {
-			panic("quaternary: conflicting values for identical key encoding")
+			panic("quaternary: conflicting values for identical key encoding: use Hashstructure Integration in quaternary package level to fix")
 		}
 		encoded[key] = struct{}{}
 		pairs = append(pairs, kv)
@@ -256,12 +276,14 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 	return New(m, bitLimit, 0)
 }
 
-// Bools retrieves a bool and the probabilistic membership based on comparable key
+// Hashstructure
+
+// GetBools retrieves a bool and the probabilistic membership based on comparable key
 func GetBools[K comparable](f []byte, key K) (bool, bool) {
 	if len(f) < 2 {
 		return false, false
 	}
-	k := comparableToBytesInside(key)
+	k := comparableToBytesInsideHashstructure(key, Integration)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1), data != nil
@@ -272,7 +294,7 @@ func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	if len(f) < 2 {
 		return nil
 	}
-	k := comparableToBytesInside(key)
+	k := comparableToBytesInsideHashstructure(key, Integration)
 	// real impl
 	return get(f, k, valBitSize, f[len(f)-2])
 }
@@ -282,7 +304,7 @@ func GetBool[K comparable](f []byte, key K) bool {
 	if len(f) < 2 {
 		return false
 	}
-	k := comparableToBytesInside(key)
+	k := comparableToBytesInsideHashstructure(key, Integration)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1)
@@ -292,11 +314,15 @@ func GetBool[K comparable](f []byte, key K) bool {
 func GetBoolInt(f []byte, key int) bool {
 	var b [8]byte
 	binary.BigEndian.PutUint64(b[:], uint64(key))
-	return getBoolBytes(f, b[:])
+	var data = b[:]
+	if Integration != nil {
+		data = append(data, Integration(key)...)
+	}
+	return hashstructureGetBoolBytes(f, data)
 }
 
-// getBoolBytes retrieves a bool based on byte key (internal, optimized)
-func getBoolBytes(f []byte, data []byte) bool {
+// hashstructureGetBoolBytes retrieves a bool based on byte key (internal, optimized)
+func hashstructureGetBoolBytes(f []byte, data []byte) bool {
 	if len(f) < 2 {
 		return false
 	}
@@ -312,7 +338,7 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 		return 0
 	}
 	var buf [8]byte
-	k := comparableToBytesInside(key)
+	k := comparableToBytesInsideHashstructure(key, Integration)
 	// real impl
 	b := get(f, k, valBitSize, f[len(f)-2])
 	copy(buf[8-len(b):8], b)
