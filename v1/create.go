@@ -27,11 +27,11 @@ func kvPairKeyGet(data []byte) (ret [32]byte) {
 	return
 }
 
-// Iterator is a function that yields key-value pairs
+// iterator is a function that yields key-value pairs
 // It can be called multiple times to restart iteration
-type Iterator func(yield func(kvPair [2][]byte) bool)
+type iterator func(yield func(kvPair [2][]byte) bool)
 
-func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
+func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 	var size uint64
 	var maxb uint64
 	if bitLimit == 1 {
@@ -45,7 +45,12 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 	} else if bitLimit > 1 {
 		iter(func(kv [2][]byte) bool {
 			length := uint64(len(*kvPairValue(&kv))) * 8
-			size += length
+			// Every stored value occupies exactly bitLimit bits (the value is only
+			// padded to whole bytes in memory), so size the filter by bitLimit
+			// times the number of items, not by the padded byte width.
+			if length > 0 {
+				size += uint64(bitLimit)
+			}
 			if maxb < length {
 				maxb = length
 			}
@@ -59,6 +64,12 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 			}
 			return true
 		})
+	}
+	// Nothing to store. Growing a zero-sized filter keeps it zero-sized, so the
+	// retry loop below would never terminate: return the header-only filter, the
+	// same one New returns for an empty map.
+	if size == 0 {
+		return []byte{bloomFuncs, bitLimit}
 	}
 	bytes := byteSize(grow(size))
 	filter = make([]byte, bytes+2, bytes+2)
@@ -97,7 +108,7 @@ func create(iter Iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 		for is_mutated && load < maxLoad {
 			var new_inserted uint64
 			iter(func(kv [2][]byte) bool {
-				if bitLimit != 0 && (len(*kvPairValue(&kv))) != int(bitLimit+7)/8 {
+				if bitLimit != 0 && (len(*kvPairValue(&kv))) != bytesForBits(bitLimit) {
 					panic("inserting value exceeding bit limit when bit limit set")
 				}
 				stored := bitLimit

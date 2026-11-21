@@ -51,10 +51,16 @@
 // # Bit Limits
 //
 // The bitLimit parameter controls value storage size:
-//   - 0 (Unlimited): Store full value length
-//   - 1-255: Limit values to specified number of bits
+//   - 0 (Automatic): uint8/16/32/64 values use the full width of the type;
+//     string and []byte values keep their own full length, which may differ
+//     between values
+//   - 1-255: Limit values to specified number of bits (at most the width of the
+//     type for uint8/16/32/64)
 //
 // Bit limits enable more compact storage but require values to fit within the limit.
+// The filter is sized by the number of stored bits (bitLimit times the number of
+// items, or the sum of the value lengths when bitLimit is 0), not by the value
+// width rounded up to whole bytes.
 //
 // # Bloom Filters
 //

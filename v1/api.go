@@ -11,6 +11,33 @@ const Unlimited byte = 0
 
 // normBytes adjusts b to exactly need bytes: truncate from left if too long,
 // zero-pad on the left if too short.
+// bytesForBits returns the number of bytes needed to hold bitLimit bits.
+//
+// The arithmetic must be done in int: bitLimit is a byte, so evaluating
+// bitLimit+7 in byte arithmetic wraps around for bitLimit >= 249 and yields a
+// width of 0 bytes.
+func bytesForBits(bitLimit byte) int {
+	return (int(bitLimit) + 7) / 8
+}
+
+// fixedBitWidth reports the natural width in bits of V when V is a fixed-width
+// numeric type (uint8, uint16, uint32, uint64). ok is false for string, []byte
+// and bool.
+func fixedBitWidth[V string | []byte | bool | uint64 | uint32 | uint16 | uint8]() (width int, ok bool) {
+	var zero V
+	switch any(zero).(type) {
+	case uint64:
+		return 64, true
+	case uint32:
+		return 32, true
+	case uint16:
+		return 16, true
+	case uint8:
+		return 8, true
+	}
+	return 0, false
+}
+
 func normBytes(b []byte, need int) []byte {
 	if len(b) > need {
 		return b[len(b)-need:]
@@ -105,7 +132,15 @@ func comparableToBytesInside[T comparable](v T) []byte {
 
 // New generates the map based on map m with garbage rate dependent on bloomFuncs.
 // It panics if distinct keys encode to identical bytes with conflicting stored values.
+// It also panics if bitLimit exceeds the width of a fixed-width value type (8, 16, 32
+// or 64 bits for uint8/16/32/64). For those types a bitLimit of 0 means the full width.
 func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit, bloomFuncs byte) []byte {
+	// Reject a bitLimit the value type cannot represent. This is argument
+	// validation, so it does not depend on whether m happens to be empty.
+	if width, ok := fixedBitWidth[V](); ok && int(bitLimit) > width {
+		panic(fmt.Sprintf("quaternary: bitLimit %d exceeds the %d-bit width of the value type", bitLimit, width))
+	}
+
 	// Check if map is empty
 	if len(m) == 0 {
 		return []byte{bloomFuncs, bitLimit}
@@ -117,6 +152,13 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			bitLimit = 1
 			break
 		}
+	}
+
+	// A fixed-width numeric type has a natural width, so bitLimit 0 ("automatic")
+	// means the full width of the type. Only string and []byte values have no
+	// fixed width and stay dynamic (bitLimit 0) with their own length per value.
+	if width, ok := fixedBitWidth[V](); ok && bitLimit == 0 {
+		bitLimit = byte(width)
 	}
 
 	// Materialize key-value pairs once to avoid repeated conversions
@@ -132,7 +174,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 				continue
 			}
 			if bitLimit != 0 {
-				need := int((bitLimit + 7) / 8)
+				need := bytesForBits(bitLimit)
 				*kvPairValue(&kv) = normBytes(val, need)
 			} else {
 				*kvPairValue(&kv) = val
@@ -143,7 +185,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			}
 			b := []byte(val)
 			if bitLimit != 0 {
-				need := int((bitLimit + 7) / 8)
+				need := bytesForBits(bitLimit)
 				*kvPairValue(&kv) = normBytes(b, need)
 			} else {
 				*kvPairValue(&kv) = b
@@ -157,11 +199,11 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		case uint64:
 			var b [8]byte
 			binary.BigEndian.PutUint64(b[:], uint64(val))
-			*kvPairValue(&kv) = b[8-((bitLimit+7)/8):]
+			*kvPairValue(&kv) = b[8-bytesForBits(bitLimit):]
 		case uint32:
 			var b [4]byte
 			binary.BigEndian.PutUint32(b[:], uint32(val))
-			need := int((bitLimit + 7) / 8)
+			need := bytesForBits(bitLimit)
 			start := 4 - need
 			if start < 0 {
 				start = 0
@@ -170,7 +212,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		case uint16:
 			var b [2]byte
 			binary.BigEndian.PutUint16(b[:], uint16(val))
-			need := int((bitLimit + 7) / 8)
+			need := bytesForBits(bitLimit)
 			start := 2 - need
 			if start < 0 {
 				start = 0
@@ -178,7 +220,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint8:
 			b := []byte{byte(val)}
-			need := int((bitLimit + 7) / 8)
+			need := bytesForBits(bitLimit)
 			*kvPairValue(&kv) = normBytes(b, need)
 		default:
 			continue

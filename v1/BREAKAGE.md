@@ -104,3 +104,19 @@ all.
   `(bitLimit+7)/8` to `N`, or reject `bitLimit` exceeding the type width).
 - For `uint8`, either truncate/validate against `bitLimit` like the wider types,
   or document/limit the supported `bitLimit` range.
+
+## Resolution
+
+Both root causes are fixed and the rule is now enforced instead of left to
+chance: `New` panics up front when `bitLimit` exceeds the width of a fixed-width
+value type, with `quaternary: bitLimit N exceeds the W-bit width of the value
+type` (W = 8, 16, 32 or 64), also for an empty map. A `bitLimit` of 0 means the
+full width of the type. The `+ 7` in the byte-width computation is now done in
+`int` (`bytesForBits`), so `bitLimit` 249..255 no longer wraps to a width of 0.
+
+An intermediate version clamped the slice start and zero-extended `uint8`/
+`uint16`/`uint32` values to a wider `bitLimit`. That worked, but it accepted a
+`bitLimit` the type cannot use (a `uint16` stored with `bitLimit` 40 still holds
+only 16 bits of information) and `uint64` could not do the same, so the rule
+was made uniform. Filters built with a wider-than-type `bitLimit` by that
+intermediate version remain readable; only building new ones is rejected.
