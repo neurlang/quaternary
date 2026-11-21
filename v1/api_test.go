@@ -469,7 +469,8 @@ func TestInsertBigBytes(t *testing.T) {
 // width, which previously caused a slice-bounds panic.
 // The sweep starts at 3 so that all test values (1..5) fit within the bit limit.
 func TestInsertBigBytesUint32(t *testing.T) {
-	for bc := 3; bc < 63; bc++ {
+	// bitLimit may not exceed the width of the value type (see TestNarrowTypesRejectBitLimitAboveWidth)
+	for bc := 3; bc <= 32; bc++ {
 		m := map[[32]byte]uint32{
 			{1}: 1,
 			{2}: 2,
@@ -492,7 +493,8 @@ func TestInsertBigBytesUint32(t *testing.T) {
 // width, which previously caused a slice-bounds panic.
 // The sweep starts at 3 so that all test values (1..5) fit within the bit limit.
 func TestInsertBigBytesUint16(t *testing.T) {
-	for bc := 3; bc < 63; bc++ {
+	// bitLimit may not exceed the width of the value type (see TestNarrowTypesRejectBitLimitAboveWidth)
+	for bc := 3; bc <= 16; bc++ {
 		m := map[[32]byte]uint16{
 			{1}: 1,
 			{2}: 2,
@@ -515,7 +517,8 @@ func TestInsertBigBytesUint16(t *testing.T) {
 // width, which previously caused a "inserting value exceeding bit limit" panic.
 // The sweep starts at 3 so that all test values (1..5) fit within the bit limit.
 func TestInsertBigBytesUint8(t *testing.T) {
-	for bc := 3; bc < 63; bc++ {
+	// bitLimit may not exceed the width of the value type (see TestNarrowTypesRejectBitLimitAboveWidth)
+	for bc := 3; bc <= 8; bc++ {
 		m := map[[32]byte]uint8{
 			{1}: 1,
 			{2}: 2,

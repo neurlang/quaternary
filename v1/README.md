@@ -87,7 +87,7 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
   - `uint8/16/32/64` values: the full width of the type (8/16/32/64 bits)
   - `string` / `[]byte` values: every value keeps its own length (it may vary between values)
   - `bool` values always use 1 bit
-- `bitLimit` may not exceed 64 for `uint64` values
+- `bitLimit` may not exceed the width of fixed-width numeric values (8/16/32/64 bits for `uint8/16/32/64`)
 - Memory is proportional to the number of stored bits: `bitLimit` x number of items (or the sum of the value lengths when `bitLimit` is 0)
 
 ---

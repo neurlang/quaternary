@@ -179,3 +179,33 @@ func TestCreateWithNothingToStoreReturnsEmptyFilter(t *testing.T) {
 		}
 	}
 }
+
+func checkRejectsAboveWidth[V uint8 | uint16 | uint32](t *testing.T, width int) {
+	t.Helper()
+	nonEmpty := map[[32]byte]V{{1}: 1, {2}: 2}
+	empty := map[[32]byte]V{}
+	want := fmt.Sprintf("exceeds the %d-bit width", width)
+	for bl := width + 1; bl <= 255; bl++ {
+		for name, m := range map[string]map[[32]byte]V{"non-empty": nonEmpty, "empty": empty} {
+			desc := fmt.Sprintf("Make(%s uint%d map, bitLimit=%d)", name, width, bl)
+			p := callWithTimeout(t, 10*time.Second, desc, func() { Make(m, byte(bl)) })
+			if msg, _ := p.(string); !strings.Contains(msg, want) {
+				t.Fatalf("%s: want a panic containing %q, got %v", desc, want, p)
+			}
+		}
+	}
+	// the boundary itself must keep working
+	f := Make(nonEmpty, byte(width))
+	if got := GetNum(f, uint64(width), [32]byte{2}); got != 2 {
+		t.Fatalf("uint%d bitLimit=%d: got %d want 2", width, width, got)
+	}
+}
+
+// TestNarrowTypesRejectBitLimitAboveWidth checks that uint8/uint16/uint32 reject
+// a bitLimit wider than the type, like uint64 does. They used to zero-extend
+// such values silently, which hid a misconfigured bitLimit.
+func TestNarrowTypesRejectBitLimitAboveWidth(t *testing.T) {
+	checkRejectsAboveWidth[uint8](t, 8)
+	checkRejectsAboveWidth[uint16](t, 16)
+	checkRejectsAboveWidth[uint32](t, 32)
+}

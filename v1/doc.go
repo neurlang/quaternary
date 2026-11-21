@@ -54,7 +54,8 @@
 //   - 0 (Automatic): uint8/16/32/64 values use the full width of the type;
 //     string and []byte values keep their own full length, which may differ
 //     between values
-//   - 1-255: Limit values to specified number of bits (at most 64 for uint64)
+//   - 1-255: Limit values to specified number of bits (at most the width of the
+//     type for uint8/16/32/64)
 //
 // Bit limits enable more compact storage but require values to fit within the limit.
 // The filter is sized by the number of stored bits (bitLimit times the number of

@@ -132,13 +132,12 @@ func comparableToBytesInside[T comparable](v T) []byte {
 
 // New generates the map based on map m with garbage rate dependent on bloomFuncs.
 // It panics if distinct keys encode to identical bytes with conflicting stored values.
-// It also panics if bitLimit exceeds 64 for uint64 values, which cannot hold more bits.
-// For uint8/16/32/64 values a bitLimit of 0 means the full width of the type.
+// It also panics if bitLimit exceeds the width of a fixed-width value type (8, 16, 32
+// or 64 bits for uint8/16/32/64). For those types a bitLimit of 0 means the full width.
 func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit, bloomFuncs byte) []byte {
 	// Reject a bitLimit the value type cannot represent. This is argument
 	// validation, so it does not depend on whether m happens to be empty.
-	// uint8/uint16/uint32 values are still zero-extended to a wider bitLimit.
-	if width, ok := fixedBitWidth[V](); ok && width == 64 && int(bitLimit) > width {
+	if width, ok := fixedBitWidth[V](); ok && int(bitLimit) > width {
 		panic(fmt.Sprintf("quaternary: bitLimit %d exceeds the %d-bit width of the value type", bitLimit, width))
 	}
 

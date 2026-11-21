@@ -15,7 +15,7 @@ import (
 // sweepRejects reports whether New must reject bitLimit b for a value type of
 // the given fixed bit width (0 for types without a fixed width).
 func sweepRejects(width, b int) bool {
-	return width == 64 && b > 64
+	return width != 0 && b > width
 }
 
 // sweepNumVals returns five values that fit in the effective number of bits.
