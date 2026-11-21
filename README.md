@@ -12,6 +12,14 @@ Quaternary Filter is a:
 * If you don't need to loop over the map
 * If you don't need to know which keys exist
 
+## 🚀 New API: v1
+
+**Introducing Quaternary v1 — a redesigned, stable API with support for generic map[K]V, configurable bit limits, and improved lookup capabilities.**
+
+If you're starting a new project, check out the new API:
+
+👉 **[Quaternary v1 — Documentation and Examples](https://github.com/neurlang/quaternary/blob/master/v1/README.md)**
+
 ## Example
 
 ```go
