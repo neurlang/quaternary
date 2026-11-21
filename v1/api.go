@@ -278,7 +278,7 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 
 // Hashstructure
 
-// Hashstructure.GetBools retrieves a bool and the probabilistic membership based on comparable key
+// GetBools retrieves a bool and the probabilistic membership based on comparable key
 func GetBools[K comparable](f []byte, key K) (bool, bool) {
 	if len(f) < 2 {
 		return false, false
@@ -289,7 +289,7 @@ func GetBools[K comparable](f []byte, key K) (bool, bool) {
 	return (len(data) > 0) && (data[0] == 1), data != nil
 }
 
-// Hashstructure.Get retrieves an item based on comparable key and value bit size
+// Get retrieves an item based on comparable key and value bit size
 func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	if len(f) < 2 {
 		return nil
@@ -299,7 +299,7 @@ func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	return get(f, k, valBitSize, f[len(f)-2])
 }
 
-// Hashstructure.GetBool retrieves a bool based on comparable key
+// GetBool retrieves a bool based on comparable key
 func GetBool[K comparable](f []byte, key K) bool {
 	if len(f) < 2 {
 		return false
@@ -310,7 +310,7 @@ func GetBool[K comparable](f []byte, key K) bool {
 	return (len(data) > 0) && (data[0] == 1)
 }
 
-// Hashstructure.GetBoolInt retrieves a bool based on int key (optimized, no allocations)
+// GetBoolInt retrieves a bool based on int key (optimized, no allocations)
 func GetBoolInt(f []byte, key int) bool {
 	var b [8]byte
 	binary.BigEndian.PutUint64(b[:], uint64(key))
@@ -332,7 +332,7 @@ func hashstructureGetBoolBytes(f []byte, data []byte) bool {
 	return ok && (ret[0]&1 == 1)
 }
 
-// Hashstructure.GetNum retrieves a number based on comparable key and value bit size
+// GetNum retrieves a number based on comparable key and value bit size
 func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 	if len(f) < 2 {
 		return 0
