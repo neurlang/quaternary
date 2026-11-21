@@ -20,6 +20,24 @@ func bytesForBits(bitLimit byte) int {
 	return (int(bitLimit) + 7) / 8
 }
 
+// fixedBitWidth reports the natural width in bits of V when V is a fixed-width
+// numeric type (uint8, uint16, uint32, uint64). ok is false for string, []byte
+// and bool.
+func fixedBitWidth[V string | []byte | bool | uint64 | uint32 | uint16 | uint8]() (width int, ok bool) {
+	var zero V
+	switch any(zero).(type) {
+	case uint64:
+		return 64, true
+	case uint32:
+		return 32, true
+	case uint16:
+		return 16, true
+	case uint8:
+		return 8, true
+	}
+	return 0, false
+}
+
 func normBytes(b []byte, need int) []byte {
 	if len(b) > need {
 		return b[len(b)-need:]
@@ -114,7 +132,15 @@ func comparableToBytesInside[T comparable](v T) []byte {
 
 // New generates the map based on map m with garbage rate dependent on bloomFuncs.
 // It panics if distinct keys encode to identical bytes with conflicting stored values.
+// It also panics if bitLimit exceeds 64 for uint64 values, which cannot hold more bits.
 func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit, bloomFuncs byte) []byte {
+	// Reject a bitLimit the value type cannot represent. This is argument
+	// validation, so it does not depend on whether m happens to be empty.
+	// uint8/uint16/uint32 values are still zero-extended to a wider bitLimit.
+	if width, ok := fixedBitWidth[V](); ok && width == 64 && int(bitLimit) > width {
+		panic(fmt.Sprintf("quaternary: bitLimit %d exceeds the %d-bit width of the value type", bitLimit, width))
+	}
+
 	// Check if map is empty
 	if len(m) == 0 {
 		return []byte{bloomFuncs, bitLimit}

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -62,5 +63,29 @@ func TestBytesBitLimitHighRange(t *testing.T) {
 				t.Fatalf("bitLimit=%d key=%s: got %x want %x", bl, k, got, v)
 			}
 		}
+	}
+}
+
+// TestUint64BitLimitAboveWidthPanics checks that a bitLimit wider than the
+// 64-bit value type is rejected up front with a descriptive panic, for empty
+// and non-empty maps alike. It used to surface as a raw slice-bounds panic (or
+// not at all for an empty map).
+func TestUint64BitLimitAboveWidthPanics(t *testing.T) {
+	nonEmpty := map[[32]byte]uint64{{1}: 1, {2}: 2}
+	empty := map[[32]byte]uint64{}
+	for bl := 65; bl <= 255; bl++ {
+		for name, m := range map[string]map[[32]byte]uint64{"non-empty": nonEmpty, "empty": empty} {
+			desc := fmt.Sprintf("Make(%s uint64 map, bitLimit=%d)", name, bl)
+			p := callWithTimeout(t, 10*time.Second, desc, func() { Make(m, byte(bl)) })
+			msg, _ := p.(string)
+			if !strings.Contains(msg, "exceeds the 64-bit width") {
+				t.Fatalf("%s: want a panic mentioning \"exceeds the 64-bit width\", got %v", desc, p)
+			}
+		}
+	}
+	// the boundary itself must keep working
+	f := Make(nonEmpty, 64)
+	if got := GetNum(f, 64, [32]byte{2}); got != 2 {
+		t.Fatalf("bitLimit=64: got %d want 2", got)
 	}
 }
