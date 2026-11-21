@@ -84,6 +84,10 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
 - For fine grained control of bit size of strored values
   - Such as: storing integers with only few least significant bits
 - Use 0 for byte-aligned automatic control
+  - `uint8/16/32/64` values: the full width of the type (8/16/32/64 bits)
+  - `string` / `[]byte` values: every value keeps its own length (it may vary between values)
+  - `bool` values always use 1 bit
+- `bitLimit` may not exceed 64 for `uint64` values
 
 ---
 

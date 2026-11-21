@@ -89,3 +89,56 @@ func TestUint64BitLimitAboveWidthPanics(t *testing.T) {
 		t.Fatalf("bitLimit=64: got %d want 2", got)
 	}
 }
+
+func checkNumericBitLimitZero[V uint8 | uint16 | uint32 | uint64](t *testing.T, width int, vals []V) {
+	t.Helper()
+	for _, bloom := range []byte{0, 2} {
+		m := map[[32]byte]V{}
+		for i, v := range vals {
+			m[[32]byte{byte(i + 1)}] = v
+		}
+		var f []byte
+		desc := fmt.Sprintf("New(uint%d values, bitLimit=0, bloom=%d)", width, bloom)
+		if p := callWithTimeout(t, 10*time.Second, desc, func() { f = New(m, 0, bloom) }); p != nil {
+			t.Fatalf("%s panicked: %v", desc, p)
+		}
+		if got := int(f[len(f)-1]); got != width {
+			t.Fatalf("%s: header bitLimit=%d, want the type width %d", desc, got, width)
+		}
+		if explicit := New(m, byte(width), bloom); string(explicit) != string(f) {
+			t.Fatalf("%s: differs from the filter built with the explicit bitLimit=%d", desc, width)
+		}
+		for k, v := range m {
+			if got := GetNum(f, uint64(width), k); got != uint64(v) {
+				t.Fatalf("%s key %x: got %#x want %#x", desc, k[:2], got, uint64(v))
+			}
+			// reading fewer bits than were stored returns the low bits
+			if got := GetNum(f, 8, k); got != uint64(v)&0xFF {
+				t.Fatalf("%s key %x: 8-bit prefix got %#x want %#x", desc, k[:2], got, uint64(v)&0xFF)
+			}
+		}
+	}
+}
+
+// TestNumericBitLimitZeroUsesFullWidth checks that bitLimit==0 on a fixed-width
+// numeric value type means the full width of that type. It used to mean "zero
+// bits", which made every value empty and Make/New never return.
+func TestNumericBitLimitZeroUsesFullWidth(t *testing.T) {
+	checkNumericBitLimitZero[uint8](t, 8, []uint8{0, 1, 0x7F, 0x80, 0xFF})
+	checkNumericBitLimitZero[uint16](t, 16, []uint16{0, 1, 0x1234, 0x8000, 0xFFFF})
+	checkNumericBitLimitZero[uint32](t, 32, []uint32{0, 1, 0xDEADBEEF, 0x80000000, 0xFFFFFFFF})
+	checkNumericBitLimitZero[uint64](t, 64, []uint64{0, 1, 0xDEADBEEFCAFEF00D, 1 << 63, ^uint64(0)})
+}
+
+// TestEmptyMapKeepsHeader pins that an empty map still yields the header-only
+// filter with the caller's bitLimit, also for numeric types.
+func TestEmptyMapKeepsHeader(t *testing.T) {
+	f := Make(map[[32]byte]uint64{}, 0)
+	if len(f) != 2 || f[0] != 0 || f[1] != 0 {
+		t.Fatalf("empty uint64 map, bitLimit=0: got %v, want [0 0]", f)
+	}
+	f = New(map[[32]byte]uint32{}, 12, 3)
+	if len(f) != 2 || f[0] != 3 || f[1] != 12 {
+		t.Fatalf("empty uint32 map, bitLimit=12 bloom=3: got %v, want [3 12]", f)
+	}
+}
