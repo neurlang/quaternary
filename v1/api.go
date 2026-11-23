@@ -58,7 +58,7 @@ type Hashstructure func(interface{}) []byte
 // https://github.com/mitchellh/hashstructure
 var Integration Hashstructure
 
-func comparableToBytes[T comparable](v T, hashit Hashstructure) []byte {
+func comparableToBytes[T comparable](v T) []byte {
 	var data = comparableToBytesInside(v)
 	if Integration != nil {
 		data = append(data, Integration(v)...)
@@ -67,7 +67,7 @@ func comparableToBytes[T comparable](v T, hashit Hashstructure) []byte {
 	return ret[:]
 }
 
-func comparableToBytesInsideHashstructure[T comparable](v T, hashit Hashstructure) []byte {
+func comparableToBytesInsideHashstructure[T comparable](v T) []byte {
 	var data = comparableToBytesInside(v)
 	if Integration != nil {
 		data = append(data, Integration(v)...)
@@ -186,7 +186,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 	encoded := make(map[[32]byte]struct{}, len(m))
 	for k, v := range m {
 		var kv [2][]byte
-		*kvPairKey(&kv) = comparableToBytes(k, Integration)
+		*kvPairKey(&kv) = comparableToBytes(k)
 
 		switch val := any(v).(type) {
 		case []byte:
@@ -283,7 +283,7 @@ func GetBools[K comparable](f []byte, key K) (bool, bool) {
 	if len(f) < 2 {
 		return false, false
 	}
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1), data != nil
@@ -294,7 +294,7 @@ func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	if len(f) < 2 {
 		return nil
 	}
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	return get(f, k, valBitSize, f[len(f)-2])
 }
@@ -304,7 +304,7 @@ func GetBool[K comparable](f []byte, key K) bool {
 	if len(f) < 2 {
 		return false
 	}
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1)
@@ -338,7 +338,7 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
 		return 0
 	}
 	var buf [8]byte
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	b := get(f, k, valBitSize, f[len(f)-2])
 	copy(buf[8-len(b):8], b)
