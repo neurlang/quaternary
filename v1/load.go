@@ -25,8 +25,8 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 
 	if funcs > 0 {
 	blooming:
-		for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-			for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+		for roundx := uint32(0); roundx < rounds; roundx++ {
+			for roundy := uint32(0); roundy < rounds; roundy++ {
 				if roundx == roundy {
 					continue
 				}
@@ -76,8 +76,8 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 	// Process rounds
 	var allDone uint64
 outer:
-	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+	for roundx := uint32(0); roundx < rounds; roundx++ {
+		for roundy := uint32(0); roundy < rounds; roundy++ {
 			if roundx == roundy {
 				continue
 			}
@@ -167,8 +167,8 @@ func getInto(f []byte, data []byte, ret []byte, done []byte, anslen uint64, func
 
 	if funcs > 0 {
 	blooming:
-		for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-			for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+		for roundx := uint32(0); roundx < rounds; roundx++ {
+			for roundy := uint32(0); roundy < rounds; roundy++ {
 				if roundx == roundy {
 					continue
 				}
@@ -220,8 +220,8 @@ func getInto(f []byte, data []byte, ret []byte, done []byte, anslen uint64, func
 	// Process rounds
 	var allDone uint64
 outer:
-	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+	for roundx := uint32(0); roundx < rounds; roundx++ {
+		for roundy := uint32(0); roundy < rounds; roundy++ {
 			if roundx == roundy {
 				continue
 			}

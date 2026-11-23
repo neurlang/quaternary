@@ -2,7 +2,9 @@ package v1
 
 import "encoding/binary"
 
-const ROUNDS = 8
+// rounds is the number of 32-bit words taken from the SHA-256 digest of a key; every
+// ordered pair of distinct words selects one probe, giving rounds*(rounds-1) probes.
+const rounds = 8
 
 func store(fs []byte, datb [32]byte, answer []byte, bitLimit byte) uint64 {
 	if len(fs) == 0 {
@@ -41,8 +43,8 @@ func store(fs []byte, datb [32]byte, answer []byte, bitLimit byte) uint64 {
 
 	// Process rounds
 outer:
-	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+	for roundx := uint32(0); roundx < rounds; roundx++ {
+		for roundy := uint32(0); roundy < rounds; roundy++ {
 			if roundx == roundy {
 				continue
 			}
@@ -126,8 +128,8 @@ func put(fs []byte, datb [32]byte, funcs byte) (ret byte) {
 	baseSize := uint64(len(fs))
 	cells := bitSize(baseSize - 2)
 
-	for roundx := uint32(0); roundx < ROUNDS; roundx++ {
-		for roundy := uint32(0); roundy < ROUNDS; roundy++ {
+	for roundx := uint32(0); roundx < rounds; roundx++ {
+		for roundy := uint32(0); roundy < rounds; roundy++ {
 			if roundx == roundy {
 				continue
 			}
