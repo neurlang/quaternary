@@ -76,7 +76,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 				return true
 			})
 			is_mutated = is_mutated && bloom_inserted > 0
-			//println("inserted", bloom_inserted, "is_mutated", is_mutated, "load", load, "maxLoad", maxLoad)
 			load += bloom_inserted
 		}
 		if is_mutated {
@@ -85,7 +84,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 			filter[bytes+1] = bitLimit
 			filter[bytes] = bloomFuncs
 			maxLoad = grow(uint64(maxLoad))
-			//println("bytes", bytes, "maxLoad", maxLoad)
 			continue
 		}
 		// QUATERNARY STAGE
@@ -104,7 +102,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 				return true
 			})
 			is_mutated = is_mutated && new_inserted > 0
-			//println("inserted", new_inserted, "is_mutated", is_mutated, "load", load, "maxLoad", maxLoad)
 			load += new_inserted
 		}
 		if is_mutated {
@@ -113,7 +110,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 			filter[bytes+1] = bitLimit
 			filter[bytes] = bloomFuncs
 			maxLoad = grow(uint64(maxLoad))
-			//println("bytes", bytes, "maxLoad", maxLoad)
 			continue
 		} else {
 			break

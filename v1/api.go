@@ -7,10 +7,11 @@ import "encoding/json"
 import "math"
 import sha256 "github.com/minio/sha256-simd"
 
+// Unlimited is the bitLimit 0, which selects the automatic width: the full width
+// of the type for uint8/16/32/64 values, or each value's own length for string
+// and []byte values.
 const Unlimited byte = 0
 
-// normBytes adjusts b to exactly need bytes: truncate from left if too long,
-// zero-pad on the left if too short.
 // bytesForBits returns the number of bytes needed to hold bitLimit bits.
 //
 // The arithmetic must be done in int: bitLimit is a byte, so evaluating
@@ -38,6 +39,8 @@ func fixedBitWidth[V string | []byte | bool | uint64 | uint32 | uint16 | uint8](
 	return 0, false
 }
 
+// normBytes adjusts b to exactly need bytes: truncate from the left if too long,
+// zero-pad on the left if too short.
 func normBytes(b []byte, need int) []byte {
 	if len(b) > need {
 		return b[len(b)-need:]
@@ -267,8 +270,6 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uint8](m map[K]V, bitLimit byte) []byte {
 	return New(m, bitLimit, 0)
 }
-
-// Hashstructure
 
 // GetBools retrieves a bool and the probabilistic membership based on comparable key
 func GetBools[K comparable](f []byte, key K) (bool, bool) {

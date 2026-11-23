@@ -6,7 +6,6 @@ import (
 
 func TestMakeNumberMapping(t *testing.T) {
 	for j := byte(100); j > 3; j-- {
-		println(j)
 		f := New(map[byte]bool{
 			41: true,
 			52: false,
@@ -38,7 +37,6 @@ func TestMakeNumberMapping(t *testing.T) {
 
 func TestMakeNumberMappingBuffers(t *testing.T) {
 	for j := byte(100); j > 6; j-- {
-		println(j)
 		f := New(map[byte]string{
 			41: "hello",
 			52: "world",
@@ -65,7 +63,7 @@ func TestMakeNumberMappingBuffers(t *testing.T) {
 
 func withHashstructureIntegration(h Hashstructure, f func()) {
 	if Integration != nil {
-		panic("pre-existing hashstructure integreation: parallel tests?")
+		panic("pre-existing hashstructure integration: parallel tests?")
 	}
 	Integration = h
 
@@ -74,7 +72,7 @@ func withHashstructureIntegration(h Hashstructure, f func()) {
 	}
 
 	if Integration == nil {
-		panic("cleared hashstructure integreation: parallel tests?")
+		panic("cleared hashstructure integration: parallel tests?")
 	}
 	Integration = nil
 }
@@ -85,7 +83,6 @@ func TestMakeNumberMappingHashstructure(t *testing.T) {
 	})
 	withHashstructureIntegration(hashstructure, func() {
 		for j := byte(100); j > 3; j-- {
-			println(j)
 			f := New(map[byte]bool{
 				41: true,
 				52: false,
@@ -122,7 +119,6 @@ func TestMakeNumberMappingBuffersHashstructure(t *testing.T) {
 	})
 	withHashstructureIntegration(hashstructure, func() {
 		for j := byte(100); j > 6; j-- {
-			println(j)
 			f := New(map[byte]string{
 				41: "hello",
 				52: "world",

@@ -24,7 +24,7 @@
 //	result := v1.GetBool(filter, "key1") // returns true
 //
 //	// Create with bloom filter (reduces false positives)
-//	filter := v1.New(m, 1, 3) // 3 bloom filter functions
+//	bloomFilter := v1.New(m, 1, 3) // 3 bloom filter functions
 //
 // # Optimized Functions
 //

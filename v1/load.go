@@ -63,9 +63,6 @@ func get(f []byte, data []byte, anslen uint64, funcs byte) (ret []byte) {
 	}
 	cells -= storedBits - 1
 
-	//println(baseSize, bitLimit, storedBits, cells)
-	//println(storedBits, anslen)
-
 	if storedBits > anslen {
 		storedBits = anslen
 	}
@@ -81,7 +78,6 @@ outer:
 			if roundx == roundy {
 				continue
 			}
-			//println(storedBits, allDone)
 			if storedBits == allDone {
 				break outer
 			}

@@ -34,8 +34,6 @@ func store(fs []byte, datb [32]byte, answer []byte, bitLimit byte) uint64 {
 		active[i] = true
 	}
 
-	//println(storedBits, cells, baseSize)
-
 	// Process rounds
 outer:
 	for roundx := uint32(0); roundx < rounds; roundx++ {
