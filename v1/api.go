@@ -225,25 +225,17 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			binary.BigEndian.PutUint32(b[:], uint32(val))
 			need := bytesForBits(bitLimit)
 			start := 4 - need
-			if start < 0 {
-				start = 0
-			}
 			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint16:
 			var b [2]byte
 			binary.BigEndian.PutUint16(b[:], uint16(val))
 			need := bytesForBits(bitLimit)
 			start := 2 - need
-			if start < 0 {
-				start = 0
-			}
 			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint8:
 			b := []byte{byte(val)}
 			need := bytesForBits(bitLimit)
 			*kvPairValue(&kv) = normBytes(b, need)
-		default:
-			continue
 		}
 		key := kvPairKeyGet(kv[0])
 		if _, ok := encoded[key]; ok {

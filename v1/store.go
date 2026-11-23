@@ -19,11 +19,6 @@ func store(fs []byte, datb [32]byte, answer []byte, bitLimit byte) uint64 {
 	storedBits := uint64(bitLimit)
 	if storedBits == 0 {
 		storedBits = uint64(len(answer)) * 8
-		if bitLimit != 0 {
-			if uint64(bitLimit) < storedBits {
-				storedBits = uint64(bitLimit)
-			}
-		}
 	}
 	if storedBits == 0 {
 		return 0
