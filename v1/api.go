@@ -332,8 +332,13 @@ func hashstructureGetBoolBytes(f []byte, data []byte) bool {
 	return ok && (ret[0]&1 == 1)
 }
 
-// GetNum retrieves a number based on comparable key and value bit size
+// GetNum retrieves a number based on comparable key and value bit size.
+// It panics if valBitSize exceeds 64; use Get for wider values.
 func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
+	// Argument validation: independent of the filter's contents, like New's.
+	if valBitSize > 64 {
+		panic(fmt.Sprintf("quaternary: GetNum valBitSize %d exceeds the 64 bits of a uint64, use Get for wider values", valBitSize))
+	}
 	if len(f) < 2 {
 		return 0
 	}
