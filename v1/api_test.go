@@ -716,9 +716,9 @@ func FuzzPositionMapUint8(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint64Hashstructure(f *testing.F) {
-	Integration = Hashstructure(func(interface{}) []byte {
+	setIntegrationForTest(f, Hashstructure(func(interface{}) []byte {
 		return []byte{1, 2, 3}
-	})
+	}))
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 64
@@ -747,9 +747,9 @@ func FuzzPositionMapUint64Hashstructure(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint32Hashstructure(f *testing.F) {
-	Integration = Hashstructure(func(interface{}) []byte {
+	setIntegrationForTest(f, Hashstructure(func(interface{}) []byte {
 		return []byte{1, 2, 3}
-	})
+	}))
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 32
@@ -779,9 +779,9 @@ func FuzzPositionMapUint32Hashstructure(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint16Hashstructure(f *testing.F) {
-	Integration = Hashstructure(func(interface{}) []byte {
+	setIntegrationForTest(f, Hashstructure(func(interface{}) []byte {
 		return []byte{1, 2, 3}
-	})
+	}))
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 16
@@ -811,9 +811,9 @@ func FuzzPositionMapUint16Hashstructure(f *testing.F) {
 // chunk's index in the input, materializes a filter with New for bloomFuncs 0..8,
 // and verifies every key round-trips correctly.
 func FuzzPositionMapUint8Hashstructure(f *testing.F) {
-	Integration = Hashstructure(func(interface{}) []byte {
+	setIntegrationForTest(f, Hashstructure(func(interface{}) []byte {
 		return []byte{1, 2, 3}
-	})
+	}))
 	f.Add(make([]byte, 64))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		const bitLimit = 8

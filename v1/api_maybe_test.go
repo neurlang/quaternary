@@ -66,6 +66,9 @@ func withHashstructureIntegration(h Hashstructure, f func()) {
 		panic("pre-existing hashstructure integration: parallel tests?")
 	}
 	Integration = h
+	// Clear the hook even if f panics, so a failing test cannot leak it into the
+	// tests that run after it.
+	defer func() { Integration = nil }()
 
 	if f != nil {
 		f()
@@ -74,7 +77,6 @@ func withHashstructureIntegration(h Hashstructure, f func()) {
 	if Integration == nil {
 		panic("cleared hashstructure integration: parallel tests?")
 	}
-	Integration = nil
 }
 
 func TestMakeNumberMappingHashstructure(t *testing.T) {
