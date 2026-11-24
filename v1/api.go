@@ -253,6 +253,9 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 		return []byte{bloomFuncs, bitLimit}
 	}
 
+	// Build in a canonical order so the result does not depend on map iteration order
+	sortPairsByDigest(pairs)
+
 	// Create iterator over the materialized pairs
 	iter := func(yield func(kvPair [2][]byte) bool) {
 		for i := range pairs {
