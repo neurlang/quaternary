@@ -81,7 +81,7 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
 
 ## BitLimit
 
-- For fine grained control of bit size of strored values
+- For fine grained control of bit size of stored values
   - Such as: storing integers with only few least significant bits
 - Use 0 for byte-aligned automatic control
   - `uint8/16/32/64` values: the full width of the type (8/16/32/64 bits)
@@ -89,6 +89,9 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
   - `bool` values always use 1 bit
 - `bitLimit` may not exceed the width of fixed-width numeric values (8/16/32/64 bits for `uint8/16/32/64`)
 - Memory is proportional to the number of stored bits: `bitLimit` x number of items (or the sum of the value lengths when `bitLimit` is 0)
+- Values that do not fit in `bitLimit` are **silently truncated** (numbers keep their low bits; `string`/`[]byte` keep their trailing bytes)
+- With `bitLimit` above 0, `Get`/`GetNum` can read any prefix (the low `valBitSize` bits) of a value
+- With `bitLimit` 0 the filter does not know a value's length: `valBitSize` must be exactly `8*len(value)` of that key, otherwise you silently get wrong bytes. Keep the length yourself: in the least significant byte of a fixed-width value, under a derived key, or in a second filter (see the package documentation)
 
 ---
 
@@ -96,12 +99,16 @@ func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64
 
 - Setting to higher values than 0 enables returning dummy value (e.g. 0 / false) if value wasn't inserted
 - Probabilistic only (may fail - silently return garbage value with small probability)
+- Every function makes the filter larger; at most 56 functions are used (more behaves like 56)
 
 ---
 
 ## Supported key/value types
 
-* **Keys**: any `comparable` (int, string, fixed byte arrays, etc.)
+* **Keys**: any `comparable` (int, string, fixed byte arrays, etc.). A filter answers for the key's encoding, not for Go's key equality:
+  * two keys with the same encoding (structs differing only in unexported fields, invalid UTF-8 strings in composite keys, `int(1)` vs `int64(1)` in a `map[any]`) make `New`/`Make` panic, even if their values are equal
+  * pointer keys are encoded by the value they point to, not by address
+  * `+0.0` and `-0.0` are different keys; several `NaN` keys panic
 * **Values**: `bool`, `uint8/16/32/64`, `string`, `[]byte`
 
 > ⚠️ If you look up a key that wasn’t inserted, you’ll get a garbage value.

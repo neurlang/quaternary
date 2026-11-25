@@ -33,35 +33,20 @@ type iterator func(yield func(kvPair [2][]byte) bool)
 
 func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 	var size uint64
-	var maxb uint64
-	if bitLimit == 1 {
-		iter(func(kvPair [2][]byte) bool {
-			if len(*kvPairValue(&kvPair)) > 0 {
-				size++
-			}
-			return true
-		})
-		maxb = 1
-	} else if bitLimit > 1 {
+	if bitLimit > 0 {
+		// Every stored value occupies exactly bitLimit bits (the value is only
+		// padded to whole bytes in memory), so size the filter by bitLimit times
+		// the number of items, not by the padded byte width.
 		iter(func(kv [2][]byte) bool {
-			length := uint64(len(*kvPairValue(&kv))) * 8
-			// Every stored value occupies exactly bitLimit bits (the value is only
-			// padded to whole bytes in memory), so size the filter by bitLimit
-			// times the number of items, not by the padded byte width.
-			if length > 0 {
+			if len(*kvPairValue(&kv)) > 0 {
 				size += uint64(bitLimit)
-			}
-			if maxb < length {
-				maxb = length
 			}
 			return true
 		})
 	} else {
+		// Dynamic width: each value contributes its own length.
 		iter(func(kv [2][]byte) bool {
 			size += uint64(len(*kvPairValue(&kv))) * 8
-			if maxb < uint64(len(*kvPairValue(&kv)))*8 {
-				maxb = uint64(len(*kvPairValue(&kv))) * 8
-			}
 			return true
 		})
 	}
@@ -91,7 +76,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 				return true
 			})
 			is_mutated = is_mutated && bloom_inserted > 0
-			//println("inserted", bloom_inserted, "is_mutated", is_mutated, "load", load, "maxLoad", maxLoad)
 			load += bloom_inserted
 		}
 		if is_mutated {
@@ -100,7 +84,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 			filter[bytes+1] = bitLimit
 			filter[bytes] = bloomFuncs
 			maxLoad = grow(uint64(maxLoad))
-			//println("bytes", bytes, "maxLoad", maxLoad)
 			continue
 		}
 		// QUATERNARY STAGE
@@ -111,14 +94,7 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 				if bitLimit != 0 && (len(*kvPairValue(&kv))) != bytesForBits(bitLimit) {
 					panic("inserting value exceeding bit limit when bit limit set")
 				}
-				stored := bitLimit
-				if maxb < 256 && byte(maxb) < stored {
-					stored = byte(maxb)
-				}
-				if 8*len(*kvPairValue(&kv)) < 256 && byte(8*len(*kvPairValue(&kv))) < stored {
-					stored = byte(8 * len(*kvPairValue(&kv)))
-				}
-				ins := store(filter, kvPairKeyGet(*kvPairKey(&kv)), *kvPairValue(&kv), stored)
+				ins := store(filter, kvPairKeyGet(*kvPairKey(&kv)), *kvPairValue(&kv), bitLimit)
 				new_inserted += ins
 				if load+new_inserted >= maxLoad {
 					return false
@@ -126,7 +102,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 				return true
 			})
 			is_mutated = is_mutated && new_inserted > 0
-			//println("inserted", new_inserted, "is_mutated", is_mutated, "load", load, "maxLoad", maxLoad)
 			load += new_inserted
 		}
 		if is_mutated {
@@ -135,7 +110,6 @@ func create(iter iterator, bitLimit, bloomFuncs byte) (filter []byte) {
 			filter[bytes+1] = bitLimit
 			filter[bytes] = bloomFuncs
 			maxLoad = grow(uint64(maxLoad))
-			//println("bytes", bytes, "maxLoad", maxLoad)
 			continue
 		} else {
 			break

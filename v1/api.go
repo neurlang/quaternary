@@ -7,10 +7,11 @@ import "encoding/json"
 import "math"
 import sha256 "github.com/minio/sha256-simd"
 
+// Unlimited is the bitLimit 0, which selects the automatic width: the full width
+// of the type for uint8/16/32/64 values, or each value's own length for string
+// and []byte values.
 const Unlimited byte = 0
 
-// normBytes adjusts b to exactly need bytes: truncate from left if too long,
-// zero-pad on the left if too short.
 // bytesForBits returns the number of bytes needed to hold bitLimit bits.
 //
 // The arithmetic must be done in int: bitLimit is a byte, so evaluating
@@ -38,6 +39,8 @@ func fixedBitWidth[V string | []byte | bool | uint64 | uint32 | uint16 | uint8](
 	return 0, false
 }
 
+// normBytes adjusts b to exactly need bytes: truncate from the left if too long,
+// zero-pad on the left if too short.
 func normBytes(b []byte, need int) []byte {
 	if len(b) > need {
 		return b[len(b)-need:]
@@ -58,7 +61,7 @@ type Hashstructure func(interface{}) []byte
 // https://github.com/mitchellh/hashstructure
 var Integration Hashstructure
 
-func comparableToBytes[T comparable](v T, hashit Hashstructure) []byte {
+func comparableToBytes[T comparable](v T) []byte {
 	var data = comparableToBytesInside(v)
 	if Integration != nil {
 		data = append(data, Integration(v)...)
@@ -67,7 +70,7 @@ func comparableToBytes[T comparable](v T, hashit Hashstructure) []byte {
 	return ret[:]
 }
 
-func comparableToBytesInsideHashstructure[T comparable](v T, hashit Hashstructure) []byte {
+func comparableToBytesInsideHashstructure[T comparable](v T) []byte {
 	var data = comparableToBytesInside(v)
 	if Integration != nil {
 		data = append(data, Integration(v)...)
@@ -186,7 +189,7 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 	encoded := make(map[[32]byte]struct{}, len(m))
 	for k, v := range m {
 		var kv [2][]byte
-		*kvPairKey(&kv) = comparableToBytes(k, Integration)
+		*kvPairKey(&kv) = comparableToBytes(k)
 
 		switch val := any(v).(type) {
 		case []byte:
@@ -225,25 +228,17 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 			binary.BigEndian.PutUint32(b[:], uint32(val))
 			need := bytesForBits(bitLimit)
 			start := 4 - need
-			if start < 0 {
-				start = 0
-			}
 			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint16:
 			var b [2]byte
 			binary.BigEndian.PutUint16(b[:], uint16(val))
 			need := bytesForBits(bitLimit)
 			start := 2 - need
-			if start < 0 {
-				start = 0
-			}
 			*kvPairValue(&kv) = normBytes(b[start:], need)
 		case uint8:
 			b := []byte{byte(val)}
 			need := bytesForBits(bitLimit)
 			*kvPairValue(&kv) = normBytes(b, need)
-		default:
-			continue
 		}
 		key := kvPairKeyGet(kv[0])
 		if _, ok := encoded[key]; ok {
@@ -257,6 +252,9 @@ func New[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | uin
 	if len(pairs) == 0 {
 		return []byte{bloomFuncs, bitLimit}
 	}
+
+	// Build in a canonical order so the result does not depend on map iteration order
+	sortPairsByDigest(pairs)
 
 	// Create iterator over the materialized pairs
 	iter := func(yield func(kvPair [2][]byte) bool) {
@@ -276,14 +274,12 @@ func Make[K comparable, V string | []byte | bool | uint64 | uint32 | uint16 | ui
 	return New(m, bitLimit, 0)
 }
 
-// Hashstructure
-
 // GetBools retrieves a bool and the probabilistic membership based on comparable key
 func GetBools[K comparable](f []byte, key K) (bool, bool) {
 	if len(f) < 2 {
 		return false, false
 	}
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1), data != nil
@@ -294,7 +290,7 @@ func Get[K comparable](f []byte, valBitSize uint64, key K) []byte {
 	if len(f) < 2 {
 		return nil
 	}
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	return get(f, k, valBitSize, f[len(f)-2])
 }
@@ -304,7 +300,7 @@ func GetBool[K comparable](f []byte, key K) bool {
 	if len(f) < 2 {
 		return false
 	}
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	data := get(f, k, 1, f[len(f)-2])
 	return (len(data) > 0) && (data[0] == 1)
@@ -332,13 +328,18 @@ func hashstructureGetBoolBytes(f []byte, data []byte) bool {
 	return ok && (ret[0]&1 == 1)
 }
 
-// GetNum retrieves a number based on comparable key and value bit size
+// GetNum retrieves a number based on comparable key and value bit size.
+// It panics if valBitSize exceeds 64; use Get for wider values.
 func GetNum[K comparable](f []byte, valBitSize uint64, key K) uint64 {
+	// Argument validation: independent of the filter's contents, like New's.
+	if valBitSize > 64 {
+		panic(fmt.Sprintf("quaternary: GetNum valBitSize %d exceeds the 64 bits of a uint64, use Get for wider values", valBitSize))
+	}
 	if len(f) < 2 {
 		return 0
 	}
 	var buf [8]byte
-	k := comparableToBytesInsideHashstructure(key, Integration)
+	k := comparableToBytesInsideHashstructure(key)
 	// real impl
 	b := get(f, k, valBitSize, f[len(f)-2])
 	copy(buf[8-len(b):8], b)
